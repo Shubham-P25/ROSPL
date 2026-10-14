@@ -1,0 +1,221 @@
+diff --git a/client/src/features/trips/TripDetailPage.jsx b/client/src/features/trips/TripDetailPage.jsx
+index 2f8a608..7d28cbd 100644
+--- a/client/src/features/trips/TripDetailPage.jsx
++++ b/client/src/features/trips/TripDetailPage.jsx
+@@ -19,6 +19,8 @@ import TripPlacesTab from "./tabs/TripPlacesTab";
+ import TripBudgetTab from "./tabs/TripBudgetTab";
+ import TripPackingTab from "./tabs/TripPackingTab";
+ import TripWeatherTab from "./tabs/TripWeatherTab";
++import TripEmergencyTab from "./tabs/TripEmergencyTab";
++import TripDocumentsTab from "./tabs/TripDocumentsTab";
+ import TripNotesTab from "./tabs/TripNotesTab";
+ 
+ import {
+@@ -162,6 +164,8 @@ export const TripDetailPage = () => {
+     { id: "budget", label: "Budget & Expenses" },
+     { id: "packing", label: "Packing" },
+     { id: "weather", label: "Weather" },
++    { id: "emergency", label: "Emergency" },
++    { id: "documents", label: "Documents" },
+     { id: "notes", label: "Notes" },
+   ];
+ 
+@@ -270,6 +274,8 @@ export const TripDetailPage = () => {
+         {activeTab === "budget" && <TripBudgetTab trip={trip} />}
+         {activeTab === "packing" && <TripPackingTab trip={trip} />}
+         {activeTab === "weather" && <TripWeatherTab trip={trip} />}
++        {activeTab === "emergency" && <TripEmergencyTab trip={trip} />}
++        {activeTab === "documents" && <TripDocumentsTab trip={trip} />}
+         {activeTab === "notes" && (
+           <TripNotesTab trip={trip} onTripUpdated={setTrip} />
+         )}
+diff --git a/server/.env.example b/server/.env.example
+index d754cf9..7e09557 100644
+--- a/server/.env.example
++++ b/server/.env.example
+@@ -27,6 +27,19 @@ WEATHER_API_KEY=your_openweathermap_api_key
+ # Get your key from your flight data provider
+ FLIGHT_API_KEY=your_flight_api_key
+ 
++# ----- Visa Requirement API (optional) -----
++# Without these set, the visa checker returns an "official lookup link"
++# fallback instead of live data.
++VISA_API_KEY=your_visa_api_key
++VISA_API_URL=https://api.your-visa-provider.com/v1/check
++
++# ----- Amadeus Self-Service API (optional, for real flight/hotel search) -----
++# Free tier: https://developers.amadeus.com/register
++# Without these set, booking search falls back to the existing sample data,
++# clearly labeled as such in the API response.
++AMADEUS_CLIENT_ID=your_amadeus_client_id
++AMADEUS_CLIENT_SECRET=your_amadeus_client_secret
++
+ # ----- CORS / Frontend URL -----
+ # URL of your deployed frontend (for CORS)
+ FRONTEND_URL=http://localhost:3000
+diff --git a/server/controllers/bookingController.js b/server/controllers/bookingController.js
+index 6a84b7c..35b8572 100644
+--- a/server/controllers/bookingController.js
++++ b/server/controllers/bookingController.js
+@@ -1,4 +1,4 @@
+-// axios removed — not used in current mock implementation
++const amadeus = require("../utils/amadeusClient");
+ const {
+   geocodeCity,
+   searchPointsOfInterest,
+@@ -93,6 +93,51 @@ const mockHotels = [
+ ];
+ 
+ // Search for flights with filters
++// Parses an ISO 8601 duration like "PT2H30M" into "2h 30m". Amadeus returns
++// durations this way; the app's existing flight card shape expects a
++// human-readable string.
++function parseIsoDuration(iso) {
++  if (!iso) return "";
++  const match = /PT(?:(\d+)H)?(?:(\d+)M)?/.exec(iso);
++  if (!match) return iso;
++  const hours = match[1] ? `${match[1]}h` : "";
++  const minutes = match[2] ? `${match[2]}m` : "";
++  return [hours, minutes].filter(Boolean).join(" ") || "0m";
++}
++
++function timePartOf(isoDateTime) {
++  const match = /T(\d{2}:\d{2})/.exec(isoDateTime || "");
++  return match ? match[1] : isoDateTime;
++}
++
++// Maps a raw Amadeus flight-offer object to this app's existing flight card
++// shape, so the frontend doesn't need to know whether data came from
++// Amadeus or the mock fallback.
++function mapAmadeusFlightOffer(offer, { origin, destination, departureDate }) {
++  const firstItinerary = offer.itineraries?.[0];
++  const firstSegment = firstItinerary?.segments?.[0];
++  const lastSegment =
++    firstItinerary?.segments?.[firstItinerary.segments.length - 1];
++
++  return {
++    id: offer.id,
++    airline: firstSegment?.carrierCode || "Unknown",
++    price: Number(offer.price?.total) || 0,
++    departureTime: timePartOf(firstSegment?.departure?.at),
++    arrivalTime: timePartOf(lastSegment?.arrival?.at),
++    duration: parseIsoDuration(firstItinerary?.duration),
++    origin,
++    destination,
++    departureDate,
++    currency: offer.price?.currency || "USD",
++  };
++}
++
++// Search for flights. Tries real Amadeus data if AMADEUS_CLIENT_ID/SECRET
++// are configured; falls back to the mock dataset otherwise, or if the live
++// lookup fails for any reason. Every response carries source: "amadeus" |
++// "mock" so the frontend (and anyone reading the response) can tell which
++// one it got — this never silently labels mock data as live.
+ exports.searchFlights = async (req, res) => {
+   try {
+     const { origin, destination, departureDate, minBudget, maxBudget } =
+@@ -110,13 +155,63 @@ exports.searchFlights = async (req, res) => {
+       });
+     }
+ 
+-    const flights = mockFlights.map((f) => ({
+-      ...f,
+-      origin,
+-      destination,
+-      departureDate,
+-      currency: "USD",
+-    }));
++    let flights;
++    let source;
++    let note;
++
++    if (amadeus.isConfigured()) {
++      try {
++        const [originLoc, destLoc] = await Promise.all([
++          amadeus.resolveLocationCode(origin),
++          amadeus.resolveLocationCode(destination),
++        ]);
++
++        if (!originLoc || !destLoc) {
++          throw new amadeus.AmadeusError(
++            `Could not resolve an airport/city code for "${
++              !originLoc ? origin : destination
++            }"`,
++            { code: "UPSTREAM" },
++          );
++        }
++
++        const offers = await amadeus.searchFlightOffers({
++          originCode: originLoc.iataCode,
++          destinationCode: destLoc.iataCode,
++          departureDate,
++        });
++
++        flights = offers.map((offer) =>
++          mapAmadeusFlightOffer(offer, { origin, destination, departureDate }),
++        );
++        source = "amadeus";
++      } catch (err) {
++        console.error(
++          "[booking] Amadeus flight search failed, falling back to mock data:",
++          err.message,
++        );
++        flights = mockFlights.map((f) => ({
++          ...f,
++          origin,
++          destination,
++          departureDate,
++          currency: "USD",
++        }));
++        source = "mock";
++        note = "Live flight search failed; showing sample data instead.";
++      }
++    } else {
++      flights = mockFlights.map((f) => ({
++        ...f,
++        origin,
++        destination,
++        departureDate,
++        currency: "USD",
++      }));
++      source = "mock";
++      note =
++        "Live flight data isn't configured on this server (set AMADEUS_CLIENT_ID / AMADEUS_CLIENT_SECRET). Showing sample data.";
++    }
+ 
+     let filteredFlights = flights;
+ 
+@@ -131,7 +226,7 @@ exports.searchFlights = async (req, res) => {
+       );
+     }
+ 
+-    res.json({ flights: filteredFlights });
++    res.json({ flights: filteredFlights, source, ...(note && { note }) });
+   } catch (err) {
+     console.error(err.message);
+     res.status(500).send("Server error");
+diff --git a/server/server.js b/server/server.js
+index 70e2dac..e0d5794 100644
+--- a/server/server.js
++++ b/server/server.js
+@@ -103,6 +103,9 @@ const translatorRoutes = require("./routes/translator");
+ const bookingRoutes = require("./routes/booking");
+ const destinationRoutes = require("./routes/destinations");
+ const packingRoutes = require("./routes/packing");
++const emergencyRoutes = require("./routes/emergency");
++const visaRoutes = require("./routes/visa");
++const documentRoutes = require("./routes/documents");
+ 
+ // Use routes
+ app.use("/api/auth", authRoutes);
+@@ -113,6 +116,9 @@ app.use("/api/translator", translatorRoutes);
+ app.use("/api/booking", bookingRoutes);
+ app.use("/api/destinations", destinationRoutes);
+ app.use("/api/packing", packingRoutes);
++app.use("/api/emergency", emergencyRoutes);
++app.use("/api/visa", visaRoutes);
++app.use("/api/documents", documentRoutes);
+ 
+ // Base route
+ app.get("/", (req, res) => {

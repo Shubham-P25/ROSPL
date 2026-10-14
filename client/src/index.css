@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #6c2f00;
+  --color-primary-container: #8b4513;
+  --color-primary-fixed: #ffdbc9;
+  --color-primary-fixed-dim: #ffb68c;
+  --color-on-primary: #ffffff;
+  --color-on-primary-container: #ffc29f;
+  --color-on-primary-fixed: #321200;
+  --color-on-primary-fixed-variant: #753401;
+
+  --color-secondary: #4b644e;
+  --color-secondary-container: #cdeace;
+  --color-secondary-fixed: #cdeace;
+  --color-secondary-fixed-dim: #b2ceb3;
+  --color-on-secondary: #ffffff;
+  --color-on-secondary-container: #516a54;
+  --color-on-secondary-fixed: #08200f;
+  --color-on-secondary-fixed-variant: #344c38;
+
+  --color-tertiary: #5b3912;
+  --color-tertiary-container: #765027;
+  --color-tertiary-fixed: #ffdcbd;
+  --color-tertiary-fixed-dim: #f0bd8b;
+  --color-on-tertiary: #ffffff;
+  --color-on-tertiary-container: #f9c592;
+  --color-on-tertiary-fixed: #2c1600;
+  --color-on-tertiary-fixed-variant: #623f18;
+
+  --color-background: #fcf9f8;
+  --color-on-background: #1c1b1b;
+  --color-surface: #fcf9f8;
+  --color-surface-bright: #fcf9f8;
+  --color-surface-dim: #dcd9d9;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f6f3f2;
+  --color-surface-container: #f0eded;
+  --color-surface-container-high: #eae7e7;
+  --color-surface-container-highest: #e5e2e1;
+  --color-on-surface: #1c1b1b;
+  --color-on-surface-variant: #54433a;
+
+  --color-outline: #877369;
+  --color-outline-variant: #dac2b6;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans:
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-headline: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", sans-serif;
+  --font-label: "Inter", sans-serif;
+}
+
+/* Custom Stitch Editorial Styles */
+@layer utilities {
+  .scrim-bottom {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.75) 0%,
+      rgba(0, 0, 0, 0.3) 50%,
+      transparent 100%
+    );
+  }
+  .scrim-top {
+    background: linear-gradient(
+      to bottom,
+      rgba(0, 0, 0, 0.5) 0%,
+      transparent 100%
+    );
+  }
+  .scrim {
+    background: linear-gradient(
+      to top,
+      rgba(0, 0, 0, 0.7) 0%,
+      rgba(0, 0, 0, 0.2) 60%,
+      transparent 100%
+    );
+  }
+  .glass-panel {
+    background-color: rgba(252, 249, 248, 0.85);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(218, 194, 182, 0.4);
+  }
+  .glass-panel-dark {
+    background-color: rgba(28, 27, 27, 0.65);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .image-zoom {
+    overflow: hidden;
+  }
+  .image-zoom img,
+  .image-zoom .bg-cover {
+    transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  .image-zoom:hover img,
+  .image-zoom:hover .bg-cover {
+    transform: scale(1.04);
+  }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+body {
+  background-color: #fcf9f8;
+  color: #1c1b1b;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: "Playfair Display", Georgia, serif;
+}
