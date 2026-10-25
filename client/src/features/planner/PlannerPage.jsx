@@ -9,6 +9,7 @@ import MapView from "./MapView";
 import BudgetPanel from "./BudgetPanel";
 import PackingPanel from "./PackingPanel";
 import FeaturedGuides from "./FeaturedGuides";
+import AssistantPanel from "./AssistantPanel";
 import Button from "../../components/Button";
 import {
   Sparkles,
@@ -349,6 +350,14 @@ export const PlannerPage = () => {
                 );
               })}
             </div>
+
+            {/* Optional Client-Side AI Assistant Concierge */}
+            <AssistantPanel
+              destination={plan.request.destination}
+              days={plan.days || []}
+              places={plan.places || {}}
+              activeDay={1}
+            />
 
             {/* Tab Views */}
             {activeTab === "itinerary" && (
