@@ -90,4 +90,16 @@ router.get("/jobs/:id", async (req, res) => {
   }
 });
 
+const { fetchDestinationHighlights } = require("../plugins/highlights/youtube");
+
+// GET /api/planner/highlights/:destination - Curated and video highlights
+router.get("/highlights/:destination", async (req, res) => {
+  try {
+    const highlights = await fetchDestinationHighlights(req.params.destination);
+    return res.json({ destination: req.params.destination, highlights });
+  } catch (_err) {
+    return res.json({ destination: req.params.destination, highlights: [] });
+  }
+});
+
 module.exports = router;

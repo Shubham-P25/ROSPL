@@ -19,6 +19,10 @@ export const plannerApi = {
 
   // Convert plan into PackGo Trip, PackingList and Expenses
   convertToTrip: (planId) => apiClient.post(`/plans/${planId}/convert-to-trip`),
+
+  // Retrieve curated video and web highlights
+  getHighlights: (destination) =>
+    apiClient.get(`/planner/highlights/${encodeURIComponent(destination)}`),
 };
 
 export default plannerApi;

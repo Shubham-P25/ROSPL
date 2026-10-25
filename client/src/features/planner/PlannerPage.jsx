@@ -8,6 +8,7 @@ import ItineraryView from "./ItineraryView";
 import MapView from "./MapView";
 import BudgetPanel from "./BudgetPanel";
 import PackingPanel from "./PackingPanel";
+import FeaturedGuides from "./FeaturedGuides";
 import Button from "../../components/Button";
 import {
   Sparkles,
@@ -423,6 +424,9 @@ export const PlannerPage = () => {
                 </div>
               </div>
             )}
+
+            {/* Curated destination highlights and videos */}
+            <FeaturedGuides destination={plan.request.destination} />
           </div>
         )}
       </div>
