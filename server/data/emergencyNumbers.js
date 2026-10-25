@@ -7,6 +7,8 @@ const EMERGENCY_NUMBERS = {
     general: "112",
     womenHelpline: "1091",
     touristHelpline: "1363",
+    railwayHelpline: "139",
+    highwayHelpline: "1033",
     keywords: [
       "india",
       "indian",

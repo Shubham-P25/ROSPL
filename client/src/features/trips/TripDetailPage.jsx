@@ -34,9 +34,45 @@ import {
   AlertTriangle,
   Globe,
   Edit,
-  Sparkles,
 } from "lucide-react";
-import GenerateRecommendationModal from "./GenerateRecommendationModal";
+
+const DESTINATION_FALLBACK_COVERS = {
+  kerala:
+    "https://upload.wikimedia.org/wikipedia/commons/6/6e/Kochi%2C_Fishing_nets_at_sunset%2C_Kerala%2C_India.jpg",
+  mumbai:
+    "https://upload.wikimedia.org/wikipedia/commons/7/74/Mumbai_03-2016_27_skyline_at_Marine_Drive.jpg",
+  jaipur:
+    "https://upload.wikimedia.org/wikipedia/commons/4/41/East_facade_Hawa_Mahal_Jaipur_from_ground_level_%28July_2022%29_-_img_01.jpg",
+  udaipur:
+    "https://upload.wikimedia.org/wikipedia/commons/4/40/City_Palace%2C_Udaipur.jpg",
+  goa: "https://upload.wikimedia.org/wikipedia/commons/e/e0/Goa_Sunset.jpg",
+  varanasi:
+    "https://upload.wikimedia.org/wikipedia/commons/0/00/Varanasi_Ghats.jpg",
+  delhi:
+    "https://upload.wikimedia.org/wikipedia/commons/0/09/India_Gate_in_New_Delhi_03-2016.jpg",
+  agra: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Taj_Mahal%2C_Agra%2C_India_edit3.jpg",
+  manali:
+    "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1600&q=80",
+  srinagar:
+    "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&w=1600&q=80",
+  ladakh:
+    "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=1600&q=80",
+  rishikesh:
+    "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?auto=format&fit=crop&w=1600&q=80",
+};
+
+const getDestinationCover = (destName, existingImages) => {
+  if (existingImages && existingImages.length > 0 && existingImages[0]) {
+    return existingImages[0];
+  }
+  const key = (destName || "").toLowerCase().trim();
+  for (const [destKey, url] of Object.entries(DESTINATION_FALLBACK_COVERS)) {
+    if (key.includes(destKey) || destKey.includes(key)) {
+      return url;
+    }
+  }
+  return "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1600&q=80";
+};
 
 export const TripDetailPage = () => {
   const { id } = useParams();
@@ -47,8 +83,7 @@ export const TripDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Share, Delete & Recommendation Planner state
-  const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false);
+  // Share & Delete state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -146,10 +181,13 @@ export const TripDetailPage = () => {
   }
 
   const { destination, startDate, endDate, status, budget, images = [] } = trip;
-  const coverImage =
-    images && images.length > 0
-      ? images[0]
-      : "https://lh3.googleusercontent.com/aida-public/AB6AXuAP7Eydm5klYyHztk8KE4KpZIyD83iGhMUvryuywAzGAGgOn2jZs7FQbQWQOMeKhHlwAYGAeSpvj-1Y5hO08P4zVVUvvz9LzlXTRS5mAFaDA6r9AtzD5ZPvz7VZQYOz31KH_L4ULdg08ExDnOTOpYzQUH9jOCNGkrTVjXE6cwibu4jNnQe5c6N3aH39Xj1H5iOFxaQLiRQStop3An0PGby3Rw5rjaiBFJgfc3oZriy_ucxO1VVg39hkDA";
+  const [coverImage, setCoverImage] = useState(() =>
+    getDestinationCover(destination, images),
+  );
+
+  useEffect(() => {
+    setCoverImage(getDestinationCover(destination, images));
+  }, [destination, images]);
 
   const formatDate = (d) => {
     if (!d) return "";
@@ -176,9 +214,16 @@ export const TripDetailPage = () => {
     <div className="min-h-screen bg-[#FCF9F8] pb-24">
       {/* ── 1. CINEMATIC HERO HEADER ── */}
       <section className="relative w-full h-[580px] sm:h-[680px] bg-[#1C1B1B] overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url("${coverImage}")` }}
+        {/* Dynamic Destination Image with Multi-Tier Fallback */}
+        <img
+          src={coverImage}
+          alt={destination}
+          onError={() =>
+            setCoverImage(
+              "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1600&q=80",
+            )
+          }
+          className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700"
         />
         <div className="absolute inset-0 scrim-top" />
         <div className="absolute inset-0 scrim-bottom" />
@@ -227,15 +272,6 @@ export const TripDetailPage = () => {
             <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsRecommendationModalOpen(true)}
-                className="flex items-center space-x-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#944200] to-[#6C2F00] text-white hover:brightness-110 shadow-lg text-xs font-semibold transition-all duration-300 cursor-pointer border border-[#FFB68C]/30"
-              >
-                <Sparkles className="w-4 h-4 text-[#FFDCC2]" />
-                <span>AI Recommendation Plan</span>
-              </button>
-
-              <button
-                type="button"
                 onClick={handleShareClick}
                 className="flex items-center space-x-2 px-5 py-2.5 rounded-full glass-panel-dark text-white hover:bg-white hover:text-[#1C1B1B] text-xs font-semibold transition-all duration-300 cursor-pointer"
               >
@@ -278,33 +314,14 @@ export const TripDetailPage = () => {
 
       {/* ── 3. ACTIVE TAB CONTENT ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-        {activeTab === "overview" && (
-          <TripOverviewTab
-            trip={trip}
-            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
-          />
-        )}
+        {activeTab === "overview" && <TripOverviewTab trip={trip} />}
         {activeTab === "itinerary" && (
-          <TripItineraryTab
-            trip={trip}
-            onTripUpdated={setTrip}
-            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
-          />
+          <TripItineraryTab trip={trip} onTripUpdated={setTrip} />
         )}
-        {activeTab === "places" && (
-          <TripPlacesTab
-            trip={trip}
-            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
-          />
-        )}
+        {activeTab === "places" && <TripPlacesTab trip={trip} />}
         {activeTab === "budget" && <TripBudgetTab trip={trip} />}
         {activeTab === "packing" && <TripPackingTab trip={trip} />}
-        {activeTab === "weather" && (
-          <TripWeatherTab
-            trip={trip}
-            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
-          />
-        )}
+        {activeTab === "weather" && <TripWeatherTab trip={trip} />}
         {activeTab === "emergency" && <TripEmergencyTab trip={trip} />}
         {activeTab === "documents" && <TripDocumentsTab trip={trip} />}
         {activeTab === "notes" && (
@@ -411,18 +428,6 @@ export const TripDetailPage = () => {
             </div>
           </div>
         </Modal>
-      )}
-
-      {/* ── AI RECOMMENDATION PLANNER MODAL ── */}
-      {isRecommendationModalOpen && (
-        <GenerateRecommendationModal
-          isOpen={isRecommendationModalOpen}
-          onClose={() => setIsRecommendationModalOpen(false)}
-          trip={trip}
-          onSuccess={(updatedTrip) => {
-            setTrip(updatedTrip);
-          }}
-        />
       )}
     </div>
   );

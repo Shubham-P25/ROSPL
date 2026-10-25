@@ -1,14 +1,13 @@
-import React from "react";
 import {
   Clock,
   Building,
   Plane,
-  Sparkles,
+  Users,
+  Compass,
   ExternalLink,
 } from "lucide-react";
-import Button from "../../../components/Button";
 
-export const TripOverviewTab = ({ trip, onOpenPlanner }) => {
+export const TripOverviewTab = ({ trip }) => {
   const {
     destination,
     startDate,
@@ -18,6 +17,9 @@ export const TripOverviewTab = ({ trip, onOpenPlanner }) => {
     accommodation,
     transportation,
     planData,
+    numberOfPeople = 1,
+    transportType = "vehicle",
+    famousSpot,
   } = trip;
 
   const calculateDays = () => {
@@ -37,47 +39,17 @@ export const TripOverviewTab = ({ trip, onOpenPlanner }) => {
       {/* ── 1. WELCOME & SNAPSHOT METRICS BAR ── */}
       <section className="space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C1B1B]">
-            Your {destination} Journey
-          </h2>
-
-          {onOpenPlanner && (
-            <Button
-              variant="terracotta"
-              size="sm"
-              onClick={onOpenPlanner}
-              className="shrink-0"
-            >
-              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
-              <span>{activities.length > 0 ? "Regenerate Plan" : "Generate AI Plan"}</span>
-            </Button>
-          )}
-        </div>
-
-        {/* Banner if no activities yet */}
-        {activities.length === 0 && onOpenPlanner && (
-          <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
-                <Sparkles className="w-4 h-4 text-amber-700" />
-                <span>Need an optimized recommendation plan for {destination}?</span>
-              </div>
-              <p className="text-xs text-amber-800 leading-relaxed max-w-2xl">
-                Get a complete blueprint tailored to your stay: daily itinerary,
-                curated sights with route map, budget split, weather-tailored packing,
-                and local insider notes.
+          <div>
+            <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C1B1B]">
+              Your {destination} Journey
+            </h2>
+            {famousSpot && (
+              <p className="text-xs text-[#6C2F00] font-semibold mt-1">
+                ⭐ Featured Highlight: {famousSpot}
               </p>
-            </div>
-            <button
-              type="button"
-              onClick={onOpenPlanner}
-              className="px-5 py-2.5 bg-[#6C2F00] hover:bg-[#522300] text-white text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 flex items-center gap-2 cursor-pointer"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Generate Recommendation Plan</span>
-            </button>
+            )}
           </div>
-        )}
+        </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6 border-y border-[#DAC2B6]/40 bg-[#FFFFFF] px-6 rounded shadow-xs">
           <div>

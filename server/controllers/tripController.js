@@ -19,12 +19,450 @@ const SEED_COORDINATES = {
   varanasi: { lat: 25.3176, lng: 82.9739, name: "Varanasi" },
 };
 
+const DESTINATION_HERO_IMAGES = {
+  kerala: [
+    "https://upload.wikimedia.org/wikipedia/commons/6/6e/Kochi%2C_Fishing_nets_at_sunset%2C_Kerala%2C_India.jpg",
+    "https://images.unsplash.com/photo-1602216056096-3b40cc0c9944?auto=format&fit=crop&w=1600&q=80",
+    "https://upload.wikimedia.org/wikipedia/commons/4/4d/Kerala_Kumarakom_Bird_Sanctuary.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/3/3c/Kovalam_beach_trivandrum_kerala.jpg",
+  ],
+  mumbai: [
+    "https://upload.wikimedia.org/wikipedia/commons/7/74/Mumbai_03-2016_27_skyline_at_Marine_Drive.jpg",
+    "https://upload.wikimedia.org/wikipedia/commons/3/3a/Mumbai_03-2016_30_Gateway_of_India.jpg",
+    "https://images.unsplash.com/photo-1570168007204-dfb528c6958f?auto=format&fit=crop&w=1600&q=80",
+    "https://upload.wikimedia.org/wikipedia/commons/b/b9/Shree_Siddhivinayak_Temple_Mumbai.jpg",
+  ],
+  jaipur: [
+    "https://upload.wikimedia.org/wikipedia/commons/4/41/East_facade_Hawa_Mahal_Jaipur_from_ground_level_%28July_2022%29_-_img_01.jpg",
+    "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1600&q=80",
+  ],
+  udaipur: [
+    "https://upload.wikimedia.org/wikipedia/commons/4/40/City_Palace%2C_Udaipur.jpg",
+    "https://images.unsplash.com/photo-1615836245337-f5b9b2303f10?auto=format&fit=crop&w=1600&q=80",
+  ],
+  goa: [
+    "https://upload.wikimedia.org/wikipedia/commons/e/e0/Goa_Sunset.jpg",
+    "https://images.unsplash.com/photo-1512343879784-a960bf40e7f2?auto=format&fit=crop&w=1600&q=80",
+  ],
+  varanasi: [
+    "https://upload.wikimedia.org/wikipedia/commons/0/00/Varanasi_Ghats.jpg",
+    "https://images.unsplash.com/photo-1561361513-2d000a50f0dc?auto=format&fit=crop&w=1600&q=80",
+  ],
+  delhi: [
+    "https://upload.wikimedia.org/wikipedia/commons/0/09/India_Gate_in_New_Delhi_03-2016.jpg",
+    "https://images.unsplash.com/photo-1587474260584-136574528ed5?auto=format&fit=crop&w=1600&q=80",
+  ],
+  agra: [
+    "https://upload.wikimedia.org/wikipedia/commons/b/bd/Taj_Mahal%2C_Agra%2C_India_edit3.jpg",
+    "https://images.unsplash.com/photo-1564507592333-c60657eea523?auto=format&fit=crop&w=1600&q=80",
+  ],
+  manali: [
+    "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1600&q=80",
+  ],
+  srinagar: [
+    "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&w=1600&q=80",
+  ],
+  ladakh: [
+    "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=1600&q=80",
+  ],
+  rishikesh: [
+    "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?auto=format&fit=crop&w=1600&q=80",
+  ],
+  bangalore: [
+    "https://images.unsplash.com/photo-1596176530529-78163a4f7af2?auto=format&fit=crop&w=1600&q=80",
+  ],
+  hampi: [
+    "https://images.unsplash.com/photo-1600100397608-f010f443b749?auto=format&fit=crop&w=1600&q=80",
+  ],
+  amritsar: [
+    "https://images.unsplash.com/photo-1588096344356-9a25b1747805?auto=format&fit=crop&w=1600&q=80",
+  ],
+};
+
+async function resolveDestinationImages(destination) {
+  if (!destination) return [];
+  const key = destination.trim().toLowerCase();
+
+  for (const [k, imgs] of Object.entries(DESTINATION_HERO_IMAGES)) {
+    if (key.includes(k) || k.includes(key)) {
+      return imgs;
+    }
+  }
+
+  try {
+    const regex = new RegExp(`^${escapeRegExp(destination)}$`, "i");
+    const dest = await Destination.findOne({
+      $or: [{ name: regex }, { city: regex }, { state: regex }],
+    });
+    if (dest && dest.images && dest.images.length > 0) {
+      return dest.images;
+    }
+  } catch (_e) {}
+
+  return [
+    "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1600&q=80",
+  ];
+}
+
 /**
  * Escape special regex metacharacters in a string so it can be safely
  * interpolated into a RegExp without altering the intended pattern.
  */
 function escapeRegExp(string) {
   return string.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Execute full multi-provider plan generation across all 9 trip sections
+ */
+async function executeTripPlanGeneration(trip, options = {}, userId) {
+  const destination = trip.destination;
+  const startDate = trip.startDate ? new Date(trip.startDate) : new Date();
+  const endDate = trip.endDate
+    ? new Date(trip.endDate)
+    : new Date(startDate.getTime() + 2 * 24 * 60 * 60 * 1000);
+
+  const diffDays = Math.max(
+    1,
+    Math.min(14, Math.ceil(Math.abs(endDate - startDate) / (1000 * 60 * 60 * 24)) + 1),
+  );
+
+  const budget =
+    options.budget !== undefined && Number(options.budget) > 0
+      ? Number(options.budget)
+      : trip.budget > 0
+        ? trip.budget
+        : 25000;
+
+  const numberOfPeople =
+    Number(options.numberOfPeople || trip.numberOfPeople) || 1;
+  const transportType =
+    options.transportType || trip.transportType || "vehicle";
+  const daysPerSpot = Number(options.daysPerSpot || trip.daysPerSpot) || 3;
+  const famousSpot = (options.famousSpot || trip.famousSpot || "").trim();
+  const interests =
+    Array.isArray(options.interests) && options.interests.length > 0
+      ? options.interests
+      : Array.isArray(trip.interests) && trip.interests.length > 0
+        ? trip.interests
+        : ["heritage", "culture", "food", "sightseeing"];
+
+  const pace =
+    daysPerSpot >= 4 ? "relaxed" : daysPerSpot <= 2 ? "fast" : "balanced";
+
+  // 1. Geocode Destination
+  let coords = null;
+  try {
+    coords = await nominatim.geocodeDestination(destination);
+  } catch (_e) {
+    coords = null;
+  }
+
+  if (
+    !coords ||
+    typeof coords.lat !== "number" ||
+    typeof coords.lng !== "number"
+  ) {
+    const norm = normalizeCityName(destination);
+    coords = SEED_COORDINATES[norm] || SEED_COORDINATES.jaipur;
+  }
+
+  // 2. Discover Places with Fallback
+  const placeChain = [
+    async () =>
+      opentripmap.searchPlacesByRadius({
+        lat: coords.lat,
+        lng: coords.lng,
+        radiusKm: 20,
+        limit: 30,
+      }),
+    async () => getSeedPlaces(destination),
+    async () => getSeedPlaces("jaipur"),
+  ];
+
+  const placeResult = await withFallback(placeChain, {
+    timeoutMs: 5000,
+    retries: 1,
+    validate: (list) => Array.isArray(list) && list.length >= 3,
+  });
+  const places = placeResult.data;
+
+  // If user specified a famous spot / must-see spot from vlogs, inject it as top spot
+  if (famousSpot) {
+    const famousId = "custom_famous_spot";
+    const exists = places.some(
+      (p) => (p.name || "").toLowerCase() === famousSpot.toLowerCase(),
+    );
+    if (!exists) {
+      places.unshift({
+        id: famousId,
+        name: famousSpot,
+        category: "Must-See Highlight",
+        estCost: Math.round(budget * 0.02),
+        rating: 4.9,
+        visitMinutes: 120,
+        address: `${famousSpot}, ${destination}`,
+        description: `Featured highlight requested by travelers for this journey (popularized in travel vlogs).`,
+        isFamousSpot: true,
+      });
+    }
+  }
+
+  // 3. Fetch Weather Forecast
+  let weather = null;
+  try {
+    weather = await openmeteo.fetchWeatherForecast({
+      lat: coords.lat,
+      lng: coords.lng,
+      locationName: coords.name || destination,
+    });
+  } catch (_e) {
+    weather = null;
+  }
+
+  if (!weather) {
+    weather = {
+      location: coords.name || destination,
+      temperatureMax: 28,
+      temperatureMin: 18,
+      rainProbability: 10,
+      source: "offline_fallback",
+    };
+  }
+
+  // 4. Generate Pure Planner Plan
+  const planSnapshot = generatePlan(
+    {
+      destination,
+      days: diffDays,
+      budget,
+      currency: "INR",
+      pace,
+      interests,
+      travellers: numberOfPeople,
+      startDate: startDate.toISOString().split("T")[0],
+    },
+    places,
+    weather,
+  );
+
+  // 5. Enrich with Wikivoyage Guide
+  try {
+    const guide = await wikivoyage.fetchDestinationSummary(destination);
+    if (guide) {
+      planSnapshot.guide = guide;
+    }
+  } catch (_e) {}
+
+  // 6. Enrich Places with Wikimedia Photos & YouTube Vlog URLs
+  const placeEntries = Object.entries(planSnapshot.places || {});
+  for (const [, pl] of placeEntries) {
+    const vlogQuery = encodeURIComponent(
+      `${pl.name} ${destination} travel vlog`,
+    );
+    pl.vlogUrl = `https://www.youtube.com/results?search_query=${vlogQuery}`;
+    pl.mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pl.name + " " + destination)}`;
+
+    if (!pl.photos || pl.photos.length === 0) {
+      if (pl.photoUrl) {
+        pl.photos = [
+          {
+            url: pl.photoUrl,
+            caption: pl.name,
+            author: pl.photoCredit || "Curated Destination Media",
+            license: "Public Domain / CC",
+          },
+        ];
+      } else {
+        try {
+          const photo = await wikimedia.fetchPlacePhoto(pl.name, destination);
+          if (photo) {
+            pl.photos = [photo];
+            pl.photoUrl = photo.url;
+            pl.photoCredit = `${photo.author} (${photo.license})`;
+          }
+        } catch (_e) {}
+      }
+    }
+  }
+
+  // 7. Apply to Trip Activities (Itinerary) with YouTube Vlog links
+  const activities = [];
+  (planSnapshot.days || []).forEach((d) => {
+    const dayDate = new Date(startDate.getTime() + (d.day - 1) * 86400000);
+    (d.items || []).forEach((item) => {
+      const placeObj = planSnapshot.places[item.placeId] || {};
+      const vlogQuery = encodeURIComponent(
+        `${placeObj.name} ${destination} travel vlog`,
+      );
+      activities.push({
+        name: placeObj.name || "Activity",
+        date: dayDate,
+        location: placeObj.address || placeObj.name,
+        notes: `${item.slot.toUpperCase()} • ${placeObj.category || "Sight"} • Est: ₹${placeObj.estCost || 0}`,
+        vlogUrl:
+          placeObj.vlogUrl ||
+          `https://www.youtube.com/results?search_query=${vlogQuery}`,
+        day: d.day,
+      });
+    });
+  });
+
+  trip.activities = activities;
+  trip.budget = budget;
+  trip.numberOfPeople = numberOfPeople;
+  trip.transportType = transportType;
+  trip.daysPerSpot = daysPerSpot;
+  trip.famousSpot = famousSpot;
+  trip.interests = interests;
+  trip.planData = planSnapshot;
+
+  if (!trip.images || trip.images.length === 0) {
+    trip.images = await resolveDestinationImages(destination);
+  }
+
+  // Update trip description
+  const guideText = planSnapshot.guide?.extract
+    ? `\n\nDestination Background: ${planSnapshot.guide.extract}`
+    : "";
+  trip.description = `Curated journey for ${destination} (${diffDays} days, ${numberOfPeople} traveler${numberOfPeople > 1 ? "s" : ""}, ₹${budget.toLocaleString("en-IN")} target budget). Transit: ${transportType}.${guideText}`;
+
+  // 8. Save Plan Document
+  try {
+    const savedPlan = await Plan.create({
+      userId: userId || trip.user,
+      tripId: trip._id,
+      request: planSnapshot.request,
+      days: planSnapshot.days,
+      places: planSnapshot.places,
+      budget: planSnapshot.budget,
+      weather: planSnapshot.weather,
+      packing: planSnapshot.packing,
+      warnings: planSnapshot.warnings,
+      guide: planSnapshot.guide,
+      degraded: planSnapshot.degraded,
+    });
+    trip.planId = savedPlan._id;
+  } catch (_e) {}
+
+  // 9. Populate Initial Budget Expenses Distributed Across Categories & Travelers
+  if (planSnapshot.budget) {
+    try {
+      await Expense.deleteMany({
+        trip: trip._id,
+        description: { $regex: /^\[Planned\]/i },
+      });
+
+      const plannedExpenses = [
+        {
+          category: "Accommodation",
+          amount: planSnapshot.budget.stay,
+          description: `[Planned] Accommodation (${numberOfPeople} traveler${numberOfPeople > 1 ? "s" : ""})`,
+        },
+        {
+          category: "Food",
+          amount: planSnapshot.budget.food,
+          description: `[Planned] Dining & Street Food (${numberOfPeople} traveler${numberOfPeople > 1 ? "s" : ""})`,
+        },
+        {
+          category: "Transportation",
+          amount: planSnapshot.budget.transport,
+          description: `[Planned] ${transportType.toUpperCase()} & Local Transit`,
+        },
+        {
+          category: "Activities",
+          amount: planSnapshot.budget.activities,
+          description: "[Planned] Monument Entry & Sightseeing Passes",
+        },
+      ];
+
+      for (const exp of plannedExpenses) {
+        if (exp.amount > 0) {
+          await Expense.create({
+            user: userId || trip.user,
+            trip: trip._id,
+            amount: exp.amount,
+            currency: "INR",
+            category: exp.category,
+            description: exp.description,
+            date: startDate,
+          });
+        }
+      }
+    } catch (_e) {
+      console.warn("Could not save initial planned expenses:", _e.message);
+    }
+  }
+
+  // 10. Populate Packing Checklist
+  if (Array.isArray(planSnapshot.packing) && planSnapshot.packing.length > 0) {
+    try {
+      const categoryMap = (reason = "") => {
+        const r = reason.toLowerCase();
+        if (
+          r.includes("cloth") ||
+          r.includes("wear") ||
+          r.includes("jacket") ||
+          r.includes("rain") ||
+          r.includes("warm") ||
+          r.includes("towel")
+        )
+          return "Clothing";
+        if (
+          r.includes("toilet") ||
+          r.includes("hygiene") ||
+          r.includes("sunscreen") ||
+          r.includes("brush")
+        )
+          return "Toiletries";
+        if (
+          r.includes("charge") ||
+          r.includes("adapter") ||
+          r.includes("phone") ||
+          r.includes("camera") ||
+          r.includes("electronic")
+        )
+          return "Electronics";
+        if (
+          r.includes("pass") ||
+          r.includes("id") ||
+          r.includes("ticket") ||
+          r.includes("doc")
+        )
+          return "Documents";
+        if (
+          r.includes("med") ||
+          r.includes("pill") ||
+          r.includes("first aid")
+        )
+          return "Medicine";
+        return "Other";
+      };
+
+      const itemsToAdd = planSnapshot.packing.map((p) => ({
+        name: p.item,
+        category: categoryMap(p.reason),
+        packed: false,
+      }));
+
+      let packingDoc = await PackingList.findOne({ trip: trip._id });
+      if (packingDoc) {
+        packingDoc.items = itemsToAdd;
+        await packingDoc.save();
+      } else {
+        await PackingList.create({
+          trip: trip._id,
+          user: userId || trip.user,
+          items: itemsToAdd,
+        });
+      }
+    } catch (_e) {
+      console.warn("Could not save packing list:", _e.message);
+    }
+  }
+
+  await trip.save();
+  return trip;
 }
 
 // Create new trip
@@ -40,6 +478,11 @@ exports.createTrip = async (req, res) => {
       activities,
       accommodation,
       transportation,
+      numberOfPeople,
+      transportType,
+      interests,
+      daysPerSpot,
+      famousSpot,
     } = req.body;
 
     if (startDate && new Date(startDate) < new Date().setHours(0, 0, 0, 0)) {
@@ -53,19 +496,7 @@ exports.createTrip = async (req, res) => {
     }
 
     // Default images
-    let images = [];
-    if (destination) {
-      // Find destination in DB by name case-insensitively
-      const regex = new RegExp(`^${escapeRegExp(destination)}$`, "i");
-
-      const dest = await Destination.findOne({
-        name: regex,
-      });
-
-      if (dest && dest.images && dest.images.length > 0) {
-        images = dest.images;
-      }
-    }
+    const images = await resolveDestinationImages(destination);
 
     const newTrip = new Trip({
       user: req.user.id,
@@ -74,14 +505,27 @@ exports.createTrip = async (req, res) => {
       startDate,
       endDate,
       description,
-      budget: budget || 0,
+      budget: budget ? Number(budget) : 25000,
       status: status || "planned",
-      activities,
+      activities: activities || [],
       accommodation,
       transportation,
+      numberOfPeople: numberOfPeople ? Number(numberOfPeople) : 1,
+      transportType: transportType || "vehicle",
+      interests: Array.isArray(interests) ? interests : [],
+      daysPerSpot: daysPerSpot ? Number(daysPerSpot) : 3,
+      famousSpot: famousSpot || "",
     });
 
-    const trip = await newTrip.save();
+    let trip = await newTrip.save();
+
+    // Automatically generate full recommendation plan across all 9 sections
+    try {
+      trip = await executeTripPlanGeneration(trip, req.body, req.user.id);
+    } catch (genErr) {
+      console.warn("Auto-plan generation on createTrip:", genErr.message);
+    }
+
     res.json(trip);
   } catch (err) {
     console.error(err.message);
@@ -126,10 +570,19 @@ exports.getUserTrips = async (req, res) => {
 // Get a specific trip
 exports.getTrip = async (req, res) => {
   try {
-    const trip = await Trip.findOne({ _id: req.params.id, user: req.user.id });
+    let trip = await Trip.findOne({ _id: req.params.id, user: req.user.id });
 
     if (!trip) {
       return res.status(403).json({ message: "Access denied" });
+    }
+
+    // Auto-generate plan if trip doesn't have planData or activities yet
+    if (!trip.planData || !trip.activities || trip.activities.length === 0) {
+      try {
+        trip = await executeTripPlanGeneration(trip, {}, req.user.id);
+      } catch (genErr) {
+        console.warn("Auto-plan generation on getTrip:", genErr.message);
+      }
     }
 
     res.json(trip);
@@ -165,6 +618,11 @@ exports.updateTrip = async (req, res) => {
       "activities",
       "accommodation",
       "transportation",
+      "numberOfPeople",
+      "transportType",
+      "interests",
+      "daysPerSpot",
+      "famousSpot",
     ];
 
     const updateData = { updatedAt: Date.now() };
@@ -293,310 +751,12 @@ exports.generateRecommendations = async (req, res) => {
       return res.status(404).json({ message: "Trip not found" });
     }
 
-    const destination = trip.destination;
-    const startDate = trip.startDate ? new Date(trip.startDate) : new Date();
-    const endDate = trip.endDate
-      ? new Date(trip.endDate)
-      : new Date(startDate.getTime() + 2 * 24 * 60 * 60 * 1000);
-
-    const diffDays = Math.max(
-      1,
-      Math.min(
-        14,
-        Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1,
-      ),
-    );
-
-    const budget = req.body.budget
-      ? Number(req.body.budget)
-      : trip.budget > 0
-        ? trip.budget
-        : 15000;
-    const pace = req.body.pace || "normal";
-    const interests =
-      Array.isArray(req.body.interests) && req.body.interests.length > 0
-        ? req.body.interests
-        : ["culture", "food"];
-    const travellers = req.body.travellers ? Number(req.body.travellers) : 1;
-
-    // 1. Geocode Destination
-    let coords = null;
-    try {
-      coords = await nominatim.geocodeDestination(destination);
-    } catch (_e) {
-      coords = null;
-    }
-
-    if (!coords || typeof coords.lat !== "number" || typeof coords.lng !== "number") {
-      const norm = normalizeCityName(destination);
-      coords = SEED_COORDINATES[norm] || SEED_COORDINATES.jaipur;
-    }
-
-    // 2. Discover Places with Fallback
-    const placeChain = [
-      async () =>
-        opentripmap.searchPlacesByRadius({
-          lat: coords.lat,
-          lng: coords.lng,
-          radiusKm: 15,
-          limit: 30,
-        }),
-      async () => getSeedPlaces(destination),
-      async () => getSeedPlaces("jaipur"),
-    ];
-
-    const placeResult = await withFallback(placeChain, {
-      timeoutMs: 5000,
-      retries: 1,
-      validate: (list) => Array.isArray(list) && list.length >= 3,
-    });
-    const places = placeResult.data;
-
-    // 3. Fetch Weather Forecast
-    let weather = null;
-    try {
-      weather = await openmeteo.fetchWeatherForecast({
-        lat: coords.lat,
-        lng: coords.lng,
-        locationName: coords.name || destination,
-      });
-    } catch (_e) {
-      weather = null;
-    }
-
-    if (!weather) {
-      weather = {
-        location: coords.name || destination,
-        temperatureMax: 28,
-        temperatureMin: 18,
-        rainProbability: 10,
-        source: "offline_fallback",
-      };
-    }
-
-    // 4. Generate Pure Planner Plan
-    const planSnapshot = generatePlan(
-      {
-        destination,
-        days: diffDays,
-        budget,
-        currency: "INR",
-        pace,
-        interests,
-        travellers,
-        startDate: startDate.toISOString().split("T")[0],
-      },
-      places,
-      weather,
-    );
-
-    // 5. Enrich with Wikivoyage Destination Guide
-    try {
-      const guide = await wikivoyage.fetchDestinationSummary(destination);
-      if (guide) {
-        planSnapshot.guide = guide;
-      }
-    } catch (_e) {
-      // Non-critical
-    }
-
-    // 6. Enrich Places with Wikimedia Photos
-    const placeEntries = Object.entries(planSnapshot.places || {});
-    for (const [, pl] of placeEntries) {
-      if (!pl.photos || pl.photos.length === 0) {
-        if (pl.photoUrl) {
-          pl.photos = [
-            {
-              url: pl.photoUrl,
-              caption: pl.name,
-              author: pl.photoCredit || "Curated Seed",
-              license: "Public Domain / CC0",
-            },
-          ];
-        } else {
-          try {
-            const photo = await wikimedia.fetchPlacePhoto(pl.name, destination);
-            if (photo) {
-              pl.photos = [photo];
-              pl.photoUrl = photo.url;
-              pl.photoCredit = `${photo.author} (${photo.license})`;
-            }
-          } catch (_e) {
-            // Graceful photo fallback
-          }
-        }
-      }
-    }
-
-    // 7. Apply to Trip Activities (Itinerary)
-    const activities = [];
-    (planSnapshot.days || []).forEach((d) => {
-      const dayDate = new Date(startDate.getTime() + (d.day - 1) * 86400000);
-      (d.items || []).forEach((item) => {
-        const placeObj = planSnapshot.places[item.placeId] || {};
-        activities.push({
-          name: placeObj.name || "Activity",
-          date: dayDate,
-          location: placeObj.address || placeObj.name,
-          notes: `${item.slot.toUpperCase()} • ${placeObj.category || "Sight"} • Est: ₹${placeObj.estCost || 0}`,
-        });
-      });
-    });
-
-    trip.activities = activities;
-    trip.budget = budget;
-    trip.planData = planSnapshot;
-
-    // 8. Update Trip Notes & Description
-    const guideText = planSnapshot.guide?.extract
-      ? `\n\nDestination Background: ${planSnapshot.guide.extract}`
-      : "";
-    trip.description = `Recommendation plan for ${destination} (${diffDays} days, ${pace} pace, ₹${budget.toLocaleString()} budget). Includes ${Object.keys(planSnapshot.places).length} top attractions.${guideText}`;
-
-    // 9. Save Plan Snapshot
-    try {
-      const savedPlan = await Plan.create({
-        userId: req.user.id,
-        tripId: trip._id,
-        request: planSnapshot.request,
-        days: planSnapshot.days,
-        places: planSnapshot.places,
-        budget: planSnapshot.budget,
-        weather: planSnapshot.weather,
-        packing: planSnapshot.packing,
-        warnings: planSnapshot.warnings,
-        guide: planSnapshot.guide,
-        degraded: planSnapshot.degraded,
-      });
-      trip.planId = savedPlan._id;
-    } catch (_e) {
-      // Plan snapshot saved on trip.planData as well
-    }
-
-    // 10. Populate Initial Budget Expenses
-    if (planSnapshot.budget) {
-      try {
-        await Expense.deleteMany({
-          trip: trip._id,
-          description: { $regex: /^\[Planned\]/i },
-        });
-
-        const plannedExpenses = [
-          {
-            category: "Accommodation",
-            amount: planSnapshot.budget.stay,
-            description: "[Planned] Accommodation Budget",
-          },
-          {
-            category: "Food",
-            amount: planSnapshot.budget.food,
-            description: "[Planned] Dining & Food Budget",
-          },
-          {
-            category: "Transportation",
-            amount: planSnapshot.budget.transport,
-            description: "[Planned] Local Transport Budget",
-          },
-          {
-            category: "Activities",
-            amount: planSnapshot.budget.activities,
-            description: "[Planned] Sightseeing & Entry Tickets",
-          },
-        ];
-
-        for (const exp of plannedExpenses) {
-          if (exp.amount > 0) {
-            await Expense.create({
-              user: req.user.id,
-              trip: trip._id,
-              amount: exp.amount,
-              currency: "INR",
-              category: exp.category,
-              description: exp.description,
-              date: startDate,
-            });
-          }
-        }
-      } catch (_e) {
-        console.warn("Could not save initial planned expenses:", _e.message);
-      }
-    }
-
-    // 11. Populate Packing Checklist
-    if (Array.isArray(planSnapshot.packing) && planSnapshot.packing.length > 0) {
-      try {
-        const categoryMap = (reason = "") => {
-          const r = reason.toLowerCase();
-          if (
-            r.includes("cloth") ||
-            r.includes("wear") ||
-            r.includes("jacket") ||
-            r.includes("rain") ||
-            r.includes("warm") ||
-            r.includes("towel")
-          )
-            return "Clothing";
-          if (
-            r.includes("toilet") ||
-            r.includes("hygiene") ||
-            r.includes("sunscreen") ||
-            r.includes("brush")
-          )
-            return "Toiletries";
-          if (
-            r.includes("charge") ||
-            r.includes("adapter") ||
-            r.includes("phone") ||
-            r.includes("camera") ||
-            r.includes("electronic")
-          )
-            return "Electronics";
-          if (
-            r.includes("pass") ||
-            r.includes("id") ||
-            r.includes("ticket") ||
-            r.includes("doc")
-          )
-            return "Documents";
-          if (
-            r.includes("med") ||
-            r.includes("pill") ||
-            r.includes("first aid")
-          )
-            return "Medicine";
-          return "Other";
-        };
-
-        const itemsToAdd = planSnapshot.packing.map((p) => ({
-          name: p.item,
-          category: categoryMap(p.reason),
-          packed: false,
-        }));
-
-        let packingDoc = await PackingList.findOne({ trip: trip._id });
-        if (packingDoc) {
-          packingDoc.items = itemsToAdd;
-          await packingDoc.save();
-        } else {
-          await PackingList.create({
-            trip: trip._id,
-            user: req.user.id,
-            items: itemsToAdd,
-          });
-        }
-      } catch (_e) {
-        console.warn("Could not save packing list:", _e.message);
-      }
-    }
-
-    await trip.save();
-
+    const updatedTrip = await executeTripPlanGeneration(trip, req.body, req.user.id);
     return res.json({
       success: true,
-      trip,
-      plan: planSnapshot,
-      message:
-        "Recommendation plan generated and applied across all trip sections!",
+      trip: updatedTrip,
+      plan: updatedTrip.planData,
+      message: "Recommendation plan generated and applied across all trip sections!",
     });
   } catch (err) {
     console.error("Generate recommendations failed:", err);

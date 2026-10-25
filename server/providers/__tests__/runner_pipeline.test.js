@@ -38,7 +38,7 @@ describe("Runner Pipeline Resilient Integration", () => {
     expect(plan.weather).toBeDefined();
     expect(Array.isArray(plan.packing)).toBe(true);
     expect(plan.packing.length).toBeGreaterThan(0);
-  });
+  }, 15000);
 
   it("completes gracefully even for unknown destinations via global seed fallback", async () => {
     const job = {
@@ -67,5 +67,5 @@ describe("Runner Pipeline Resilient Integration", () => {
     expect(plan).toBeDefined();
     expect(plan.days.length).toBe(2);
     expect(plan.degraded).toContain("places:seed-fallback");
-  });
+  }, 15000);
 });

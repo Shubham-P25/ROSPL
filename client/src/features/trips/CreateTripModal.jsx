@@ -19,7 +19,11 @@ export const CreateTripModal = ({
     description: "",
     status: "planned",
     accommodationName: "",
-    transportType: "",
+    numberOfPeople: 2,
+    transportType: "vehicle",
+    interests: ["heritage", "culture", "food"],
+    daysPerSpot: 3,
+    famousSpot: "",
   });
 
   const [autocompleteResults, setAutocompleteResults] = useState([]);
@@ -58,6 +62,18 @@ export const CreateTripModal = ({
 
   const todayStr = new Date().toISOString().split("T")[0];
 
+  const toggleInterest = (id) => {
+    setFormData((prev) => {
+      const exists = prev.interests.includes(id);
+      return {
+        ...prev,
+        interests: exists
+          ? prev.interests.filter((i) => i !== id)
+          : [...prev.interests, id],
+      };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -82,8 +98,13 @@ export const CreateTripModal = ({
       startDate: formData.startDate,
       endDate: formData.endDate,
       description: formData.description.trim(),
-      budget: formData.budget ? Number(formData.budget) : 0,
+      budget: formData.budget ? Number(formData.budget) : 25000,
       status: formData.status,
+      numberOfPeople: Number(formData.numberOfPeople) || 1,
+      transportType: formData.transportType,
+      interests: formData.interests,
+      daysPerSpot: Number(formData.daysPerSpot) || 3,
+      famousSpot: formData.famousSpot.trim(),
     };
 
     if (formData.accommodationName) {
@@ -285,6 +306,141 @@ export const CreateTripModal = ({
                 <option value="ongoing">Ongoing</option>
                 <option value="completed">Completed</option>
               </select>
+            </div>
+          </div>
+
+          {/* Travelers & Transport */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-people"
+              >
+                No. of Peoples *
+              </label>
+              <input
+                id="trip-people"
+                type="number"
+                min="1"
+                max="50"
+                required
+                value={formData.numberOfPeople}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    numberOfPeople: Math.max(1, parseInt(e.target.value) || 1),
+                  })
+                }
+                placeholder="e.g. 2"
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-transport"
+              >
+                Transport Mode
+              </label>
+              <select
+                id="trip-transport"
+                value={formData.transportType}
+                onChange={(e) =>
+                  setFormData({ ...formData, transportType: e.target.value })
+                }
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              >
+                <option value="vehicle">Vehicle / Car / Cab</option>
+                <option value="train">Train</option>
+                <option value="plane">Plane / Flight</option>
+                <option value="bus">Bus / Coach</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Days Per Spot & Famous Spot */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-days-per-spot"
+              >
+                Days Per Spot
+              </label>
+              <select
+                id="trip-days-per-spot"
+                value={formData.daysPerSpot}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    daysPerSpot: parseInt(e.target.value) || 3,
+                  })
+                }
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              >
+                <option value="2">2 Days per spot (Fast-Paced)</option>
+                <option value="3">3 Days per spot (Recommended Default)</option>
+                <option value="4">4 Days per spot (Relaxed)</option>
+                <option value="5">5 Days per spot (In-Depth)</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-famous-spot"
+              >
+                Famous Spot / Reason of Visit
+              </label>
+              <input
+                id="trip-famous-spot"
+                type="text"
+                value={formData.famousSpot}
+                onChange={(e) =>
+                  setFormData({ ...formData, famousSpot: e.target.value })
+                }
+                placeholder="e.g. Marine Drive, Athirappilly Falls, Amer Fort"
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] placeholder-[#877369]/50 focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              />
+              <span className="text-[11px] text-[#877369] block mt-1">
+                Have a favorite place you saw in travel vlogs? We'll prioritize it.
+              </span>
+            </div>
+          </div>
+
+          {/* Interests & Highlights */}
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-wider text-[#877369]">
+              Interests & Highlights
+            </label>
+            <div className="flex flex-wrap gap-2 pt-1">
+              {[
+                { id: "games", label: "🎮 Games & Adventure" },
+                { id: "beach", label: "🏖️ Beach & Coastal" },
+                { id: "heritage", label: "🏰 Heritage & Palaces" },
+                { id: "food", label: "🍲 Food & Street Eats" },
+                { id: "nature", label: "🌿 Nature & Wildlife" },
+                { id: "shopping", label: "🛍️ Bazaars & Shopping" },
+                { id: "spiritual", label: "🕉️ Spiritual & Temples" },
+                { id: "nightlife", label: "✨ Leisure & Nightlife" },
+              ].map((item) => {
+                const selected = formData.interests.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => toggleInterest(item.id)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                      selected
+                        ? "bg-[#6C2F00] text-white shadow-xs"
+                        : "bg-[#FFFFFF] text-[#54433A] border border-[#DAC2B6] hover:border-[#6C2F00]"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

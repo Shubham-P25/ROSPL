@@ -199,7 +199,7 @@ export const TripWeatherTab = ({ trip }) => {
               Weather Data for {trip.destination}
             </h4>
             <p className="text-xs text-slate-500 max-w-md mx-auto mt-1">
-              Click below to sync live forecast data or generate a recommendation plan.
+              Click below to sync live forecast data for your journey.
             </p>
           </div>
           <Button variant="outline" size="sm" onClick={fetchWeather}>

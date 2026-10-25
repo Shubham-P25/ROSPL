@@ -58,6 +58,30 @@ const TripSchema = new mongoose.Schema({
     departureTime: Date,
     arrivalTime: Date,
   },
+  numberOfPeople: {
+    type: Number,
+    default: 1,
+    min: [1, "Number of people must be at least 1"],
+  },
+  transportType: {
+    type: String,
+    default: "vehicle",
+  },
+  interests: [
+    {
+      type: String,
+    },
+  ],
+  daysPerSpot: {
+    type: Number,
+    default: 3,
+    min: 1,
+    max: 10,
+  },
+  famousSpot: {
+    type: String,
+    default: "",
+  },
   shareToken: {
     type: String,
     default: null,
