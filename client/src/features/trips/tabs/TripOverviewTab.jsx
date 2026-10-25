@@ -34,6 +34,8 @@ export const TripOverviewTab = ({ trip }) => {
   const nextActivity =
     activities && activities.length > 0 ? activities[0] : null;
 
+  const startingPoint = trip.startingLocation || trip.originCity || "";
+
   return (
     <div className="space-y-12">
       {/* ── 1. WELCOME & SNAPSHOT METRICS BAR ── */}
@@ -43,11 +45,18 @@ export const TripOverviewTab = ({ trip }) => {
             <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C1B1B]">
               Your {destination} Journey
             </h2>
-            {famousSpot && (
-              <p className="text-xs text-[#6C2F00] font-semibold mt-1">
-                ⭐ Featured Highlight: {famousSpot}
-              </p>
-            )}
+            <div className="flex flex-wrap items-center gap-3 mt-1.5">
+              {startingPoint && (
+                <span className="text-xs text-[#54433A] bg-[#F6F3F2] border border-[#DAC2B6] px-2.5 py-1 rounded font-medium">
+                  🚀 Departing from: <strong className="text-[#1C1B1B]">{startingPoint}</strong>
+                </span>
+              )}
+              {famousSpot && (
+                <span className="text-xs text-[#6C2F00] bg-[#FFDBC9]/50 border border-[#DAC2B6] px-2.5 py-1 rounded font-semibold">
+                  ⭐ Featured Highlight: {famousSpot}
+                </span>
+              )}
+            </div>
           </div>
         </div>
 
@@ -68,26 +77,46 @@ export const TripOverviewTab = ({ trip }) => {
             <p className="font-serif text-xl sm:text-2xl font-bold text-[#1C1B1B]">
               ₹{Number(budget || 0).toLocaleString("en-IN")}
             </p>
+            <p className="text-[10px] text-[#877369]">
+              ~₹{Math.round(Number(budget || 0) / Math.max(1, numberOfPeople)).toLocaleString("en-IN")} / person
+            </p>
           </div>
 
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[#877369] mb-1">
-              Activities
+              Party Size
             </p>
             <p className="font-serif text-xl sm:text-2xl font-bold text-[#1C1B1B]">
-              {activities.length} Planned
+              {numberOfPeople} {numberOfPeople === 1 ? "Traveler" : "Travelers"}
             </p>
           </div>
 
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-[#877369] mb-1">
-              Status
+              Transit Mode
             </p>
             <p className="font-serif text-xl sm:text-2xl font-bold text-[#6C2F00] capitalize">
-              {trip.status || "Planned"}
+              {transportType || "Vehicle"}
             </p>
           </div>
         </div>
+
+        {/* Selected Interests & Highlights */}
+        {Array.isArray(trip.interests) && trip.interests.length > 0 && (
+          <div className="flex flex-wrap items-center gap-2 pt-1">
+            <span className="text-xs font-semibold uppercase tracking-wider text-[#877369] mr-2">
+              Trip Themes:
+            </span>
+            {trip.interests.map((interest, idx) => (
+              <span
+                key={idx}
+                className="px-3 py-1 bg-[#FFFFFF] border border-[#DAC2B6] rounded-full text-xs font-medium text-[#54433A] shadow-2xs"
+              >
+                {interest}
+              </span>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ── 2. WIKIVOYAGE DESTINATION GUIDE (IF AVAILABLE) ── */}
@@ -216,17 +245,28 @@ export const TripOverviewTab = ({ trip }) => {
           </div>
 
           <div className="text-xs space-y-2 text-[#54433A] pt-2 border-t border-[#F0EDED]">
+            {startingPoint && (
+              <p>
+                <span className="text-[#877369] uppercase font-semibold block text-[10px]">
+                  Departing From
+                </span>
+                <strong className="text-sm text-[#1C1B1B]">
+                  {startingPoint}
+                </strong>
+              </p>
+            )}
             <p>
               <span className="text-[#877369] uppercase font-semibold block text-[10px]">
                 Transit Mode
               </span>
-              <strong className="text-sm text-[#1C1B1B]">
-                {transportation?.type || "Local Metro, Auto & Cabs"}
+              <strong className="text-sm text-[#1C1B1B] capitalize">
+                {typeof transportation === "object" && transportation?.type
+                  ? transportation.type
+                  : transportation || transportType || "Vehicle"}
               </strong>
             </p>
             <p className="text-[#877369] pt-2">
-              Local transport estimates and transit routes are factored
-              directly into your daily itinerary.
+              Route and transit logistics for {numberOfPeople} traveler{numberOfPeople > 1 ? "s" : ""} factored directly into your itinerary.
             </p>
           </div>
         </div>

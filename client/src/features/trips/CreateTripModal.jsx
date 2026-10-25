@@ -3,7 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { tripsApi } from "../../services/api/tripsApi";
 import { destinationsApi } from "../../services/api/destinationsApi";
 import { getErrorMessage } from "../../services/api/client";
-import { MapPin, Calendar, AlertCircle, ArrowRight, X } from "lucide-react";
+import { MapPin, Calendar, AlertCircle, ArrowRight, X, Check } from "lucide-react";
+
+export const INTEREST_OPTIONS = [
+  { id: "Games & Adventure", emoji: "🎮", label: "Games & Adventure" },
+  { id: "Beach & Coastal", emoji: "🏖️", label: "Beach & Coastal" },
+  { id: "Heritage & Palaces", emoji: "🏰", label: "Heritage & Palaces" },
+  { id: "Food & Street Eats", emoji: "🍲", label: "Food & Street Eats" },
+  { id: "Nature & Wildlife", emoji: "🌿", label: "Nature & Wildlife" },
+  { id: "Bazaars & Shopping", emoji: "🛍️", label: "Bazaars & Shopping" },
+  { id: "Spiritual & Temples", emoji: "🕉️", label: "Spiritual & Temples" },
+  { id: "Leisure & Nightlife", emoji: "✨", label: "Leisure & Nightlife" },
+];
 
 export const CreateTripModal = ({
   isOpen,
@@ -17,11 +28,11 @@ export const CreateTripModal = ({
     endDate: "",
     budget: "",
     description: "",
-    status: "planned",
+    startingLocation: "",
     accommodationName: "",
     numberOfPeople: 2,
     transportType: "vehicle",
-    interests: ["heritage", "culture", "food"],
+    interests: ["Heritage & Palaces", "Food & Street Eats"],
     daysPerSpot: 3,
     famousSpot: "",
   });
@@ -99,9 +110,13 @@ export const CreateTripModal = ({
       endDate: formData.endDate,
       description: formData.description.trim(),
       budget: formData.budget ? Number(formData.budget) : 25000,
-      status: formData.status,
+      status: "planned",
+      startingLocation: formData.startingLocation.trim(),
       numberOfPeople: Number(formData.numberOfPeople) || 1,
-      transportType: formData.transportType,
+      transportType: formData.transportType || "vehicle",
+      transportation: {
+        type: formData.transportType || "vehicle",
+      },
       interests: formData.interests,
       daysPerSpot: Number(formData.daysPerSpot) || 3,
       famousSpot: formData.famousSpot.trim(),
@@ -112,12 +127,6 @@ export const CreateTripModal = ({
         name: formData.accommodationName,
         checkIn: formData.startDate,
         checkOut: formData.endDate,
-      };
-    }
-
-    if (formData.transportType) {
-      payload.transportation = {
-        type: formData.transportType,
       };
     }
 
@@ -290,22 +299,20 @@ export const CreateTripModal = ({
             <div>
               <label
                 className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
-                htmlFor="trip-status"
+                htmlFor="trip-starting-location"
               >
-                Journey Status
+                Where You Live / Coming From
               </label>
-              <select
-                id="trip-status"
-                value={formData.status}
+              <input
+                id="trip-starting-location"
+                type="text"
+                value={formData.startingLocation}
                 onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
+                  setFormData({ ...formData, startingLocation: e.target.value })
                 }
-                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
-              >
-                <option value="planned">Planned</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="completed">Completed</option>
-              </select>
+                placeholder="e.g. Mumbai, New Delhi, Bengaluru, Pune"
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] placeholder-[#877369]/50 focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              />
             </div>
           </div>
 
@@ -411,33 +418,35 @@ export const CreateTripModal = ({
 
           {/* Interests & Highlights */}
           <div className="space-y-2">
-            <label className="block text-xs font-semibold uppercase tracking-wider text-[#877369]">
-              Interests & Highlights
-            </label>
-            <div className="flex flex-wrap gap-2 pt-1">
-              {[
-                { id: "games", label: "🎮 Games & Adventure" },
-                { id: "beach", label: "🏖️ Beach & Coastal" },
-                { id: "heritage", label: "🏰 Heritage & Palaces" },
-                { id: "food", label: "🍲 Food & Street Eats" },
-                { id: "nature", label: "🌿 Nature & Wildlife" },
-                { id: "shopping", label: "🛍️ Bazaars & Shopping" },
-                { id: "spiritual", label: "🕉️ Spiritual & Temples" },
-                { id: "nightlife", label: "✨ Leisure & Nightlife" },
-              ].map((item) => {
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#877369]">
+                Interests & Highlights
+              </label>
+              <span className="text-[11px] text-[#6C2F00] font-medium">
+                {formData.interests.length} selected
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              {INTEREST_OPTIONS.map((item) => {
                 const selected = formData.interests.includes(item.id);
                 return (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => toggleInterest(item.id)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-semibold tracking-wide transition-all cursor-pointer ${
+                    className={`flex items-center gap-2 p-2.5 rounded border text-left transition-all duration-150 cursor-pointer ${
                       selected
-                        ? "bg-[#6C2F00] text-white shadow-xs"
-                        : "bg-[#FFFFFF] text-[#54433A] border border-[#DAC2B6] hover:border-[#6C2F00]"
+                        ? "bg-[#6C2F00] text-white border-[#6C2F00] shadow-xs"
+                        : "bg-[#FFFFFF] text-[#54433A] border-[#DAC2B6] hover:border-[#6C2F00] hover:bg-[#FAF8F7]"
                     }`}
                   >
-                    {item.label}
+                    <span className="text-base shrink-0">{item.emoji}</span>
+                    <span className="text-xs font-medium leading-tight truncate">
+                      {item.label}
+                    </span>
+                    {selected && (
+                      <Check className="w-3.5 h-3.5 ml-auto text-white shrink-0" />
+                    )}
                   </button>
                 );
               })}

@@ -40,7 +40,7 @@ async function sweepStuckJobs() {
   try {
     if (mongoose.connection.readyState === 1) {
       const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000);
-      const res = await PlanJob.updateMany(
+      const res = await PlanJob.collection.updateMany(
         {
           status: "running",
           updatedAt: { $lt: twoMinutesAgo },
@@ -52,7 +52,7 @@ async function sweepStuckJobs() {
           },
         },
       );
-      if (res.modifiedCount > 0) {
+      if (res && res.modifiedCount > 0) {
         logger.info("Swept stuck running jobs on boot", {
           count: res.modifiedCount,
         });

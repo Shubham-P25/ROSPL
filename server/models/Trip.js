@@ -53,10 +53,13 @@ const TripSchema = new mongoose.Schema({
     contactInfo: String,
   },
   transportation: {
+    type: mongoose.Schema.Types.Mixed,
+    default: () => ({ type: "vehicle" }),
+  },
+  startingLocation: {
     type: String,
-    bookingRef: String,
-    departureTime: Date,
-    arrivalTime: Date,
+    default: "",
+    trim: true,
   },
   numberOfPeople: {
     type: Number,
@@ -128,6 +131,7 @@ TripSchema.pre("validate", function (next) {
 
   if (
     this.transportation &&
+    typeof this.transportation === "object" &&
     this.transportation.departureTime &&
     this.transportation.arrivalTime &&
     this.transportation.arrivalTime < this.transportation.departureTime

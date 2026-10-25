@@ -483,6 +483,8 @@ exports.createTrip = async (req, res) => {
       interests,
       daysPerSpot,
       famousSpot,
+      startingLocation,
+      originCity,
     } = req.body;
 
     if (startDate && new Date(startDate) < new Date().setHours(0, 0, 0, 0)) {
@@ -498,6 +500,26 @@ exports.createTrip = async (req, res) => {
     // Default images
     const images = await resolveDestinationImages(destination);
 
+    // Normalize transport
+    const resolvedTransportType =
+      transportType ||
+      (typeof transportation === "object" && transportation?.type
+        ? transportation.type
+        : typeof transportation === "string"
+        ? transportation
+        : "vehicle");
+
+    const resolvedTransportation =
+      typeof transportation === "object" && transportation !== null
+        ? transportation
+        : { type: resolvedTransportType };
+
+    const resolvedStartingLocation = (
+      startingLocation ||
+      originCity ||
+      ""
+    ).trim();
+
     const newTrip = new Trip({
       user: req.user.id,
       destination,
@@ -509,12 +531,13 @@ exports.createTrip = async (req, res) => {
       status: status || "planned",
       activities: activities || [],
       accommodation,
-      transportation,
+      transportation: resolvedTransportation,
       numberOfPeople: numberOfPeople ? Number(numberOfPeople) : 1,
-      transportType: transportType || "vehicle",
+      transportType: resolvedTransportType,
       interests: Array.isArray(interests) ? interests : [],
       daysPerSpot: daysPerSpot ? Number(daysPerSpot) : 3,
       famousSpot: famousSpot || "",
+      startingLocation: resolvedStartingLocation,
     });
 
     let trip = await newTrip.save();
@@ -528,8 +551,8 @@ exports.createTrip = async (req, res) => {
 
     res.json(trip);
   } catch (err) {
-    console.error(err.message);
-    res.status(500).send("Server error");
+    console.error("Trip creation failed:", err.message);
+    res.status(500).json({ msg: err.message || "Server error" });
   }
 };
 
@@ -623,6 +646,7 @@ exports.updateTrip = async (req, res) => {
       "interests",
       "daysPerSpot",
       "famousSpot",
+      "startingLocation",
     ];
 
     const updateData = { updatedAt: Date.now() };
@@ -631,6 +655,10 @@ exports.updateTrip = async (req, res) => {
         updateData[field] = req.body[field];
       }
     });
+
+    if (req.body.originCity !== undefined && updateData.startingLocation === undefined) {
+      updateData.startingLocation = req.body.originCity;
+    }
 
     // Update images if destination changed
     if (updateData.destination && updateData.destination !== trip.destination) {
