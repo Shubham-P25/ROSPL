@@ -7,6 +7,7 @@ export const ItineraryView = ({
   plan,
   onRegenerateDay,
   regeneratingDay = false,
+  onUpdatePlan,
 }) => {
   const [activeDay, setActiveDay] = useState(1);
 
@@ -16,6 +17,32 @@ export const ItineraryView = ({
 
   const { days, places = {}, degraded = [] } = plan;
   const currentDayData = days.find((d) => d.day === activeDay) || days[0];
+
+  const handleMoveStop = (dayNum, index, direction) => {
+    if (!onUpdatePlan) return;
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    const updatedDays = days.map((d) => {
+      if (d.day !== dayNum) return d;
+      const items = [...d.items];
+      if (targetIndex < 0 || targetIndex >= items.length) return d;
+      const temp = items[index];
+      items[index] = items[targetIndex];
+      items[targetIndex] = temp;
+      return { ...d, items };
+    });
+    onUpdatePlan({ days: updatedDays });
+  };
+
+  const handleRemoveStop = (dayNum, index) => {
+    if (!onUpdatePlan) return;
+    const updatedDays = days.map((d) => {
+      if (d.day !== dayNum) return d;
+      const items = d.items.filter((_, idx) => idx !== index);
+      const estCost = items.reduce((s, it) => s + (places[it.placeId]?.estCost || 0), 0);
+      return { ...d, items, estCost };
+    });
+    onUpdatePlan({ days: updatedDays });
+  };
 
   return (
     <div className="space-y-8">
@@ -92,6 +119,11 @@ export const ItineraryView = ({
                 place={place}
                 slot={item.slot}
                 travelMinutesFromPrev={item.travelMinutesFromPrev}
+                isFirst={index === 0}
+                isLast={index === currentDayData.items.length - 1}
+                onMoveUp={() => handleMoveStop(currentDayData.day, index, "up")}
+                onMoveDown={() => handleMoveStop(currentDayData.day, index, "down")}
+                onRemove={() => handleRemoveStop(currentDayData.day, index)}
               />
             );
           })

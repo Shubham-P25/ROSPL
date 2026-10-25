@@ -5,13 +5,28 @@ import { getErrorMessage } from "../../services/api/client";
 import PlannerForm from "./PlannerForm";
 import PlanProgress from "./PlanProgress";
 import ItineraryView from "./ItineraryView";
+import MapView from "./MapView";
 import BudgetPanel from "./BudgetPanel";
 import PackingPanel from "./PackingPanel";
 import Button from "../../components/Button";
-import { Sparkles, Calendar, DollarSign, CheckSquare, Plus, ArrowLeft } from "lucide-react";
+import {
+  Sparkles,
+  Calendar,
+  DollarSign,
+  CheckSquare,
+  Map as MapIcon,
+  ArrowLeft,
+  Share2,
+  BookmarkCheck,
+  Check,
+  BookOpen,
+  ExternalLink,
+  ChevronRight,
+} from "lucide-react";
 
 export const PlannerPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const planIdParam = searchParams.get("planId");
 
   const [mode, setMode] = useState(planIdParam ? "view" : "form"); // 'form' | 'progress' | 'view'
@@ -20,8 +35,12 @@ export const PlannerPage = () => {
   const [plan, setPlan] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("itinerary"); // 'itinerary' | 'budget' | 'packing'
+  const [activeTab, setActiveTab] = useState("itinerary");
+  const [selectedMapDay, setSelectedMapDay] = useState(1);
   const [regeneratingDay, setRegeneratingDay] = useState(false);
+  const [convertingToTrip, setConvertingToTrip] = useState(false);
+  const [convertedTripId, setConvertedTripId] = useState(null);
+  const [copiedShare, setCopiedShare] = useState(false);
 
   const pollTimerRef = useRef(null);
 
@@ -38,6 +57,9 @@ export const PlannerPage = () => {
     try {
       const res = await plannerApi.getPlan(id);
       setPlan(res.data);
+      if (res.data?.tripId) {
+        setConvertedTripId(res.data.tripId);
+      }
       setMode("view");
     } catch (err) {
       setError(getErrorMessage(err, "Failed to load saved travel plan."));
@@ -112,13 +134,66 @@ export const PlannerPage = () => {
     }
   };
 
+  const handleUpdatePlan = async (updates) => {
+    if (!plan || !plan._id) return;
+    try {
+      const res = await plannerApi.updatePlan(plan._id, updates);
+      if (res.data) {
+        setPlan((prev) => ({
+          ...prev,
+          ...res.data,
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to update plan:", err);
+    }
+  };
+
+  const handleShare = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopiedShare(true);
+    setTimeout(() => setCopiedShare(false), 2500);
+  };
+
+  const handleSaveAsJourney = async () => {
+    if (!plan || !plan._id) return;
+    setConvertingToTrip(true);
+    try {
+      const res = await plannerApi.convertToTrip(plan._id);
+      if (res.data?.tripId) {
+        setConvertedTripId(res.data.tripId);
+      }
+    } catch (err) {
+      if (err.response?.status === 401) {
+        alert("Please log in or register to save this itinerary directly to your Journeys.");
+        navigate("/login");
+      } else {
+        alert(getErrorMessage(err, "Failed to save journey."));
+      }
+    } finally {
+      setConvertingToTrip(false);
+    }
+  };
+
   const handleReset = () => {
     setMode("form");
     setJobId(null);
     setPlan(null);
     setError(null);
+    setConvertedTripId(null);
     setSearchParams({});
   };
+
+  const tabs = [
+    { id: "itinerary", label: "Itinerary & Places", icon: Calendar },
+    { id: "map", label: "Route Map", icon: MapIcon },
+    { id: "budget", label: "Budget Split", icon: DollarSign },
+    { id: "packing", label: "Packing Checklist", icon: CheckSquare },
+  ];
+
+  if (plan?.guide) {
+    tabs.push({ id: "guide", label: "Destination Guide", icon: BookOpen });
+  }
 
   return (
     <div className="min-h-screen bg-[#FCF9F8] text-[#1C1B1B] pt-28 pb-32">
@@ -153,6 +228,31 @@ export const PlannerPage = () => {
         {/* Mode: View (Result) */}
         {mode === "view" && plan && (
           <div className="space-y-8">
+            {/* Success notification if converted to Trip */}
+            {convertedTripId && (
+              <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between gap-4 text-emerald-900 shadow-sm animate-in fade-in">
+                <div className="flex items-center space-x-3">
+                  <BookmarkCheck className="w-5 h-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <span className="font-bold text-sm block">
+                      Saved to your PackGo Journeys!
+                    </span>
+                    <span className="text-xs text-emerald-700">
+                      Activities, budget items, and packing checklist are fully synchronized.
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/trips/${convertedTripId}`)}
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors flex items-center gap-1.5 shrink-0"
+                >
+                  <span>Open Journey</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+
             {/* Header Banner */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pb-6 border-b border-[#DAC2B6]/40">
               <div className="space-y-2">
@@ -176,28 +276,67 @@ export const PlannerPage = () => {
                 </p>
               </div>
 
-              <div className="flex items-center space-x-3">
-                <Button variant="outline" size="sm" onClick={handleReset}>
+              {/* Action Buttons */}
+              <div className="flex flex-wrap items-center gap-2.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleShare}
+                  className="text-xs font-semibold"
+                >
+                  {copiedShare ? (
+                    <>
+                      <Check className="w-3.5 h-3.5 mr-1.5 text-emerald-600" />
+                      Link Copied!
+                    </>
+                  ) : (
+                    <>
+                      <Share2 className="w-3.5 h-3.5 mr-1.5" />
+                      Share Plan
+                    </>
+                  )}
+                </Button>
+
+                {!convertedTripId ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    loading={convertingToTrip}
+                    onClick={handleSaveAsJourney}
+                    className="text-xs font-semibold"
+                  >
+                    <BookmarkCheck className="w-3.5 h-3.5 mr-1.5" />
+                    Save as Journey
+                  </Button>
+                ) : (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => navigate(`/trips/${convertedTripId}`)}
+                    className="text-xs font-semibold"
+                  >
+                    <BookmarkCheck className="w-3.5 h-3.5 mr-1.5" />
+                    View Journey
+                  </Button>
+                )}
+
+                <Button variant="outline" size="sm" onClick={handleReset} className="text-xs">
                   <ArrowLeft className="w-3.5 h-3.5 mr-1.5" />
-                  Plan Another Journey
+                  New Plan
                 </Button>
               </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className="flex items-center space-x-2 border-b border-[#DAC2B6]/40 pb-3">
-              {[
-                { id: "itinerary", label: "Itinerary & Places", icon: Calendar },
-                { id: "budget", label: "Budget Split", icon: DollarSign },
-                { id: "packing", label: "Packing Checklist", icon: CheckSquare },
-              ].map((tab) => {
+            <div className="flex items-center space-x-2 border-b border-[#DAC2B6]/40 pb-3 overflow-x-auto">
+              {tabs.map((tab) => {
                 const Icon = tab.icon;
                 return (
                   <button
                     key={tab.id}
                     type="button"
                     onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer ${
+                    className={`flex items-center space-x-2 px-5 py-2.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all cursor-pointer whitespace-nowrap ${
                       activeTab === tab.id
                         ? "bg-[#6C2F00] text-white shadow-xs"
                         : "bg-white text-[#54433A] border border-[#DAC2B6] hover:border-[#6C2F00]"
@@ -216,6 +355,16 @@ export const PlannerPage = () => {
                 plan={plan}
                 onRegenerateDay={handleRegenerateDay}
                 regeneratingDay={regeneratingDay}
+                onUpdatePlan={handleUpdatePlan}
+              />
+            )}
+
+            {activeTab === "map" && (
+              <MapView
+                days={plan.days || []}
+                places={plan.places || {}}
+                selectedDay={selectedMapDay}
+                onSelectDay={setSelectedMapDay}
               />
             )}
 
@@ -228,7 +377,51 @@ export const PlannerPage = () => {
             )}
 
             {activeTab === "packing" && (
-              <PackingPanel packing={plan.packing} />
+              <PackingPanel
+                packing={plan.packing}
+                weather={plan.weather}
+              />
+            )}
+
+            {activeTab === "guide" && plan.guide && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-8 space-y-6 shadow-sm">
+                <div className="flex flex-col md:flex-row gap-6 items-start">
+                  {plan.guide.thumbnail && (
+                    <img
+                      src={plan.guide.thumbnail}
+                      alt={plan.guide.title}
+                      className="w-full md:w-80 h-52 object-cover rounded-xl shadow-sm border border-slate-100"
+                    />
+                  )}
+                  <div className="space-y-4 flex-1">
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold uppercase tracking-wider text-indigo-600">
+                        WIKIVOYAGE DESTINATION GUIDE
+                      </span>
+                      <h2 className="text-2xl sm:text-3xl font-serif font-bold text-slate-900">
+                        {plan.guide.title}
+                      </h2>
+                    </div>
+                    <p className="text-sm text-slate-600 leading-relaxed">
+                      {plan.guide.extract}
+                    </p>
+                    <div className="pt-2 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 border-t border-slate-100">
+                      <span>{plan.guide.attribution || "CC BY-SA 4.0"}</span>
+                      {plan.guide.contentUrl && (
+                        <a
+                          href={plan.guide.contentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center text-indigo-600 hover:text-indigo-800 font-semibold gap-1"
+                        >
+                          <span>Read full travel guide on Wikivoyage</span>
+                          <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         )}

@@ -1,8 +1,17 @@
 import React from "react";
 import Badge from "../../components/Badge";
-import { Star, Clock, MapPin, ExternalLink, Image as ImageIcon } from "lucide-react";
+import { Star, Clock, ExternalLink, Image as ImageIcon, ChevronUp, ChevronDown, Trash2 } from "lucide-react";
 
-export const PlaceCard = ({ place, slot, travelMinutesFromPrev }) => {
+export const PlaceCard = ({
+  place,
+  slot,
+  travelMinutesFromPrev,
+  onMoveUp,
+  onMoveDown,
+  onRemove,
+  isFirst = false,
+  isLast = false,
+}) => {
   if (!place) return null;
 
   const {
@@ -67,12 +76,50 @@ export const PlaceCard = ({ place, slot, travelMinutesFromPrev }) => {
               )}
             </div>
 
-            {rating !== undefined && (
-              <div className="flex items-center space-x-1 text-xs font-semibold text-[#877369]">
-                <Star className="w-3.5 h-3.5 fill-[#F0BD8B] text-[#F0BD8B]" />
-                <span>{rating.toFixed(1)} / 5</span>
-              </div>
-            )}
+            <div className="flex items-center space-x-2">
+              {rating !== undefined && (
+                <div className="flex items-center space-x-1 text-xs font-semibold text-[#877369]">
+                  <Star className="w-3.5 h-3.5 fill-[#F0BD8B] text-[#F0BD8B]" />
+                  <span>{rating.toFixed(1)} / 5</span>
+                </div>
+              )}
+
+              {/* Interactive reorder / remove controls */}
+              {(onMoveUp || onMoveDown || onRemove) && (
+                <div className="flex items-center space-x-1 bg-slate-100 rounded-lg p-0.5 ml-2">
+                  {onMoveUp && !isFirst && (
+                    <button
+                      type="button"
+                      onClick={onMoveUp}
+                      title="Move stop earlier"
+                      className="p-1 hover:bg-white rounded text-slate-500 hover:text-indigo-600 transition-colors"
+                    >
+                      <ChevronUp className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {onMoveDown && !isLast && (
+                    <button
+                      type="button"
+                      onClick={onMoveDown}
+                      title="Move stop later"
+                      className="p-1 hover:bg-white rounded text-slate-500 hover:text-indigo-600 transition-colors"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                  {onRemove && (
+                    <button
+                      type="button"
+                      onClick={onRemove}
+                      title="Remove stop"
+                      className="p-1 hover:bg-rose-50 rounded text-slate-400 hover:text-rose-600 transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
 
           <h4 className="font-serif text-xl font-bold text-[#1C1B1B] leading-snug">

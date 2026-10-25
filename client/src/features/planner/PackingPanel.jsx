@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { CheckSquare, Square, Plus } from "lucide-react";
+import { CheckSquare, Square, Plus, CloudSun, Thermometer, Umbrella } from "lucide-react";
 import Button from "../../components/Button";
 
-export const PackingPanel = ({ packing = [] }) => {
+export const PackingPanel = ({ packing = [], weather = null }) => {
   const [items, setItems] = useState(() =>
     packing.map((p, idx) => ({
       id: idx,
@@ -58,6 +58,36 @@ export const PackingPanel = ({ packing = [] }) => {
           <div className="text-lg font-bold text-[#6C2F00]">{progressPct}% Packed</div>
         </div>
       </div>
+
+      {/* Climate forecast badge */}
+      {weather && (
+        <div className="p-4 bg-gradient-to-r from-amber-50/70 to-orange-50/70 border border-amber-200/60 rounded-xl flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center space-x-3">
+            <div className="p-2.5 bg-amber-100/80 rounded-lg text-amber-800">
+              <CloudSun className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-[11px] font-bold text-amber-900 uppercase tracking-wider block">
+                Destination Forecast ({weather.location || "Trip Area"})
+              </span>
+              <p className="text-xs text-amber-800">
+                Avg High: <strong>{weather.temperatureMax || 30}°C</strong> · Low: <strong>{weather.temperatureMin || 18}°C</strong>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center space-x-3 text-xs text-amber-900">
+            <div className="flex items-center space-x-1">
+              <Umbrella className="w-3.5 h-3.5 text-amber-700" />
+              <span>Rain Chance: <strong>{weather.rainProbability || 0}%</strong></span>
+            </div>
+            {weather.source && (
+              <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-white/70 border border-amber-200 text-amber-800">
+                via {weather.source}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Checklist items */}
       <div className="space-y-3">
