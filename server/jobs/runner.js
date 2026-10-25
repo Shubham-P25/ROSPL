@@ -1,18 +1,34 @@
 /**
  * jobs/runner.js
- * In-process background job runner with stage updates and concurrency control.
+ * In-process background job runner with stage updates, concurrency control,
+ * and resilient provider integration.
  */
 const mongoose = require("mongoose");
 const PlanJob = require("./model");
 const Plan = require("../models/Plan");
 const { generatePlan } = require("../planner/index");
-const { getSeedPlaces } = require("../seed/index");
+const { getSeedPlaces, normalizeCityName } = require("../seed/index");
+const { withFallback } = require("../lib/withFallback");
 const logger = require("../lib/logger");
+
+// Provider adapters
+const nominatim = require("../providers/nominatim");
+const opentripmap = require("../providers/opentripmap");
+const openmeteo = require("../providers/openmeteo");
+const wikivoyage = require("../providers/wikivoyage");
+const wikimedia = require("../providers/wikimedia");
+const frankfurter = require("../providers/frankfurter");
 
 const MAX_CONCURRENT_JOBS = parseInt(
   process.env.PLANNER_MAX_CONCURRENT_JOBS || "3",
   10,
 );
+
+const SEED_COORDINATES = {
+  jaipur: { lat: 26.9124, lng: 75.7872, name: "Jaipur" },
+  goa: { lat: 15.2993, lng: 74.124, name: "Goa" },
+  varanasi: { lat: 25.3176, lng: 82.9739, name: "Varanasi" },
+};
 
 let activeRunningCount = 0;
 const inMemoryJobs = new Map(); // Fallback when running without MongoDB
@@ -47,10 +63,22 @@ async function sweepStuckJobs() {
   }
 }
 
+function normalizeRequest(req = {}) {
+  const normalized = { ...req };
+  if (normalized.durationDays && !normalized.days) {
+    normalized.days = normalized.durationDays;
+  }
+  if (normalized.pace === "medium") {
+    normalized.pace = "normal";
+  }
+  return normalized;
+}
+
 /**
  * Create a new PlanJob in Mongo or in-memory
  */
-async function createPlanJob(request, userId = null) {
+async function createPlanJob(rawRequest, userId = null) {
+  const request = normalizeRequest(rawRequest);
   // Check user concurrency limit (max 1 running job per user)
   if (userId && mongoose.connection.readyState === 1) {
     const existing = await PlanJob.findOne({
@@ -124,50 +152,149 @@ async function getJobById(jobId) {
 }
 
 /**
- * Execute job pipeline
+ * Execute job pipeline with multi-provider fallbacks
  */
 async function executeJob(job) {
+  job.request = normalizeRequest(job.request);
   const jobId = job._id.toString();
   const startTime = Date.now();
-  logger.info("Starting plan generation job", {
+  const destination = job.request.destination;
+  const degraded = [];
+
+  logger.info("Starting resilient plan generation job", {
     jobId,
-    destination: job.request.destination,
+    destination,
   });
 
   try {
     activeRunningCount++;
     await updateJobStage(jobId, "places", 10, { status: "running" });
 
-    const destination = job.request.destination;
-    const degraded = [];
+    // Stage 1: Geocoding via Nominatim with Seed Fallback
+    let coords = null;
+    try {
+      coords = await nominatim.geocodeDestination(destination);
+    } catch (_err) {
+      coords = null;
+    }
 
-    // Stage 1 & 2: Places (Phase 1 uses seed fallback)
+    if (!coords || typeof coords.lat !== "number" || typeof coords.lng !== "number") {
+      const normCity = normalizeCityName(destination);
+      coords = SEED_COORDINATES[normCity] || SEED_COORDINATES.jaipur;
+      degraded.push("geocoding:seed-fallback");
+    }
+
+    // Stage 2: Place Discovery (OpenTripMap -> Seed -> Default Jaipur Seed)
     await updateJobStage(jobId, "places", 30);
-    let places = getSeedPlaces(destination);
+    const placeChain = [
+      async () => {
+        return await opentripmap.searchPlacesByRadius({
+          lat: coords.lat,
+          lng: coords.lng,
+          radiusKm: 15,
+          limit: 30,
+        });
+      },
+      async () => {
+        return getSeedPlaces(destination);
+      },
+      async () => {
+        return getSeedPlaces("jaipur");
+      },
+    ];
 
-    if (places.length === 0) {
-      // Default to Jaipur if unknown seed destination during foundation phase
-      places = getSeedPlaces("jaipur");
+    const placeResult = await withFallback(placeChain, {
+      timeoutMs: 5000,
+      retries: 1,
+      validate: (list) => Array.isArray(list) && list.length >= 3,
+    });
+
+    const places = placeResult.data;
+    if (placeResult.degraded) {
       degraded.push("places:seed-fallback");
     }
 
-    // Stage 3: Weather (Phase 1 mock/degraded)
+    // Stage 3: Weather Forecast via Open-Meteo
     await updateJobStage(jobId, "weather", 50);
-    const mockWeather = {
-      location: destination,
-      temperatureMax: 30,
-      temperatureMin: 18,
-      rainProbability: 10,
-    };
+    let weather = null;
+    try {
+      weather = await openmeteo.fetchWeatherForecast({
+        lat: coords.lat,
+        lng: coords.lng,
+        locationName: coords.name || destination,
+      });
+    } catch (_err) {
+      weather = null;
+    }
 
-    // Stage 4: Pure Planner Core
+    if (!weather) {
+      degraded.push("weather");
+      weather = {
+        location: coords.name || destination,
+        temperatureMax: 28,
+        temperatureMin: 18,
+        rainProbability: 10,
+        source: "offline_fallback",
+      };
+    }
+
+    // Stage 4: Pure Planner Algorithm (deterministic scoring, clustering, ordering, slots, budget, packing)
     await updateJobStage(jobId, "planning", 70);
-    const planSnapshot = generatePlan(job.request, places, mockWeather, {
+    const planSnapshot = generatePlan(job.request, places, weather, {
       degraded,
     });
 
-    // Stage 5: Photos & Descriptions
+    // Destination guide summary via Wikivoyage (non-blocking)
+    try {
+      const guide = await wikivoyage.fetchDestinationSummary(destination);
+      if (guide) {
+        planSnapshot.guide = guide;
+      }
+    } catch (_e) {
+      // Guide is non-critical
+    }
+
+    // Stage 5: Photo Enrichment via Wikimedia Commons for selected stops
     await updateJobStage(jobId, "photos", 85);
+    const placeEntries = Object.entries(planSnapshot.places || {});
+    for (const [, place] of placeEntries) {
+      if (!place.photos || place.photos.length === 0) {
+        if (place.photoUrl) {
+          place.photos = [
+            {
+              url: place.photoUrl,
+              caption: place.name,
+              author: place.photoCredit || "Curated Seed",
+              license: "Public Domain / CC0",
+              licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+            },
+          ];
+        } else {
+          try {
+            const photo = await wikimedia.fetchPlacePhoto(place.name, destination);
+            if (photo) {
+              place.photos = [photo];
+              place.photoUrl = photo.url;
+              place.photoCredit = `${photo.author} (${photo.license})`;
+            }
+          } catch (_e) {
+            // Graceful photo fallback
+          }
+        }
+      }
+    }
+
+    // Currency conversion if requested currency is not INR
+    if (job.request.currency && job.request.currency.toUpperCase() !== "INR") {
+      try {
+        const rateInfo = await frankfurter.getExchangeRate("INR", job.request.currency);
+        if (rateInfo) {
+          planSnapshot.exchangeRate = rateInfo;
+        }
+      } catch (_e) {
+        // Exchange rate is optional enrichment
+      }
+    }
 
     // Stage 6: Saving snapshot
     await updateJobStage(jobId, "saving", 95);
@@ -184,12 +311,15 @@ async function executeJob(job) {
         packing: planSnapshot.packing,
         warnings: planSnapshot.warnings,
         degraded: planSnapshot.degraded,
+        guide: planSnapshot.guide,
+        exchangeRate: planSnapshot.exchangeRate,
         generatedAt: planSnapshot.generatedAt,
         schemaVersion: planSnapshot.schemaVersion,
       });
       planId = savedPlan._id;
     } else {
       planId = new mongoose.Types.ObjectId();
+      planSnapshot._id = planId;
       inMemoryJobs.set(`plan:${planId}`, planSnapshot);
     }
 
@@ -200,7 +330,7 @@ async function executeJob(job) {
       planId,
     });
 
-    logger.info("Completed plan generation job", {
+    logger.info("Completed resilient plan generation job", {
       jobId,
       planId,
       durationMs,
@@ -257,5 +387,6 @@ module.exports = {
   getJobById,
   sweepStuckJobs,
   processNextJobs,
+  executeJob,
   inMemoryJobs,
 };
