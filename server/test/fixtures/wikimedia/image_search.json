@@ -1,0 +1,41 @@
+{
+  "batchcomplete": "",
+  "query": {
+    "pages": {
+      "4629471": {
+        "pageid": 4629471,
+        "ns": 6,
+        "title": "File:Amber Fort Jaipur.jpg",
+        "index": 1,
+        "imageinfo": [
+          {
+            "thumburl": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Amber_Fort_Jaipur.jpg/800px-Amber_Fort_Jaipur.jpg",
+            "thumbwidth": 800,
+            "thumbheight": 533,
+            "url": "https://upload.wikimedia.org/wikipedia/commons/c/ca/Amber_Fort_Jaipur.jpg",
+            "descriptionurl": "https://commons.wikimedia.org/wiki/File:Amber_Fort_Jaipur.jpg",
+            "descriptionshorturl": "https://commons.wikimedia.org/w/index.php?curid=4629471",
+            "extmetadata": {
+              "Artist": {
+                "value": "<a href=\"https://commons.wikimedia.org/wiki/User:Flicka\" title=\"User:Flicka\">Flicka</a>",
+                "source": "commons-desc-page"
+              },
+              "LicenseShortName": {
+                "value": "CC BY-SA 3.0",
+                "source": "commons-desc-page"
+              },
+              "LicenseUrl": {
+                "value": "https://creativecommons.org/licenses/by-sa/3.0",
+                "source": "commons-desc-page"
+              },
+              "ObjectName": {
+                "value": "Amer Fort, Jaipur",
+                "source": "mediawiki-metadata"
+              }
+            }
+          }
+        ]
+      }
+    }
+  }
+}

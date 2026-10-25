@@ -1,0 +1,43 @@
+{
+  "type": "standard",
+  "title": "Jaipur",
+  "displaytitle": "<span class=\"mw-page-title-main\">Jaipur</span>",
+  "namespace": {
+    "id": 0,
+    "text": ""
+  },
+  "wikibase_item": "Q66485",
+  "titles": {
+    "canonical": "Jaipur",
+    "normalized": "Jaipur",
+    "display": "<span class=\"mw-page-title-main\">Jaipur</span>"
+  },
+  "pageid": 1493,
+  "thumbnail": {
+    "source": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/East_facade_Hawa_Mahal_Jaipur_2016-01-24.jpg/320px-East_facade_Hawa_Mahal_Jaipur_2016-01-24.jpg",
+    "width": 320,
+    "height": 213
+  },
+  "originalimage": {
+    "source": "https://upload.wikimedia.org/wikipedia/commons/4/41/East_facade_Hawa_Mahal_Jaipur_2016-01-24.jpg",
+    "width": 3456,
+    "height": 2304
+  },
+  "lang": "en",
+  "dir": "ltr",
+  "revision": "4693892",
+  "tid": "b8f67340-9a48-11ee-8260-eb0fa34e7279",
+  "timestamp": "2023-12-14T08:12:00Z",
+  "description": "City in Rajasthan, India",
+  "description_source": "local",
+  "content_urls": {
+    "desktop": {
+      "page": "https://en.wikivoyage.org/wiki/Jaipur",
+      "revisions": "https://en.wikivoyage.org/wiki/Jaipur?action=history",
+      "edit": "https://en.wikivoyage.org/wiki/Jaipur?action=edit",
+      "talk": "https://en.wikivoyage.org/wiki/Talk:Jaipur"
+    }
+  },
+  "extract": "Jaipur is the capital of the state of Rajasthan in northwestern India, also known as the Pink City because of its distinctive saffron-pink buildings.",
+  "extract_html": "<p><b>Jaipur</b> is the capital of the state of Rajasthan in northwestern India, also known as the Pink City.</p>"
+}

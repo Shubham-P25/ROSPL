@@ -60,6 +60,8 @@ const PlanModelSchema = new mongoose.Schema(
     ],
     warnings: [String],
     degraded: [String],
+    guide: mongoose.Schema.Types.Mixed,
+    exchangeRate: mongoose.Schema.Types.Mixed,
     generatedAt: {
       type: String,
       default: () => new Date().toISOString(),
