@@ -5,17 +5,27 @@ const WARNING_WINDOW_DAYS = 180; // 6 months — common visa-rejection threshold
 function withExpiryStatus(doc) {
   // Normalize to UTC midnight to prevent timezone boundary drift
   const now = new Date();
-  const utcNow = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  
-  const expiry = new Date(doc.expiryDate);
-  const utcExpiry = Date.UTC(expiry.getUTCFullYear(), expiry.getUTCMonth(), expiry.getUTCDate());
+  const utcNow = Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate(),
+  );
 
-  const daysUntilExpiry = Math.floor((utcExpiry - utcNow) / (1000 * 60 * 60 * 24));
+  const expiry = new Date(doc.expiryDate);
+  const utcExpiry = Date.UTC(
+    expiry.getUTCFullYear(),
+    expiry.getUTCMonth(),
+    expiry.getUTCDate(),
+  );
+
+  const daysUntilExpiry = Math.floor(
+    (utcExpiry - utcNow) / (1000 * 60 * 60 * 24),
+  );
 
   let status = "ok";
   if (daysUntilExpiry < 0) status = "expired";
   else if (daysUntilExpiry <= WARNING_WINDOW_DAYS) status = "expiring_soon";
-  
+
   return { ...doc.toObject(), daysUntilExpiry, status };
 }
 

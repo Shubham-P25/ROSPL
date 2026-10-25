@@ -86,6 +86,18 @@ export const Navbar = () => {
             Explore
           </Link>
 
+          <Link
+            to="/planner"
+            className={`text-xs font-semibold uppercase tracking-wider transition-colors pb-1 flex items-center space-x-1 ${
+              location.pathname.startsWith("/planner")
+                ? activeLinkColor
+                : linkColor
+            }`}
+          >
+            <Sparkles className="w-3.5 h-3.5 text-[#E07A5F]" />
+            <span>Trip Planner</span>
+          </Link>
+
           {isAuthenticated ? (
             <>
               <Link
@@ -238,6 +250,14 @@ export const Navbar = () => {
             className="block text-sm font-semibold uppercase tracking-wider text-[#54433A] py-1"
           >
             Explore India
+          </Link>
+          <Link
+            to="/planner"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center space-x-2 text-sm font-semibold uppercase tracking-wider text-[#6C2F00] py-1"
+          >
+            <Sparkles className="w-4 h-4 text-[#E07A5F]" />
+            <span>Trip Planner</span>
           </Link>
 
           {isAuthenticated ? (

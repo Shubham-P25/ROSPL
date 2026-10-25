@@ -106,6 +106,10 @@ const packingRoutes = require("./routes/packing");
 const emergencyRoutes = require("./routes/emergency");
 const visaRoutes = require("./routes/visa");
 const documentRoutes = require("./routes/documents");
+const plannerRoutes = require("./jobs/routes");
+const planRoutes = require("./routes/plans");
+const { router: healthRoutes } = require("./routes/health");
+const { sweepStuckJobs } = require("./jobs/runner");
 
 // Use routes
 app.use("/api/auth", authRoutes);
@@ -119,6 +123,9 @@ app.use("/api/packing", packingRoutes);
 app.use("/api/emergency", emergencyRoutes);
 app.use("/api/visa", visaRoutes);
 app.use("/api/documents", documentRoutes);
+app.use("/api/planner", plannerRoutes);
+app.use("/api/plans", planRoutes);
+app.use("/api/health", healthRoutes);
 
 // Base route
 app.get("/", (req, res) => {
@@ -175,7 +182,10 @@ validateJwtSecret();
 mongoose.set("sanitizeFilter", true);
 mongoose
   .connect(process.env.MONGO_URI)
-  .then(() => console.log("Connected to MongoDB"))
+  .then(() => {
+    console.log("Connected to MongoDB");
+    sweepStuckJobs();
+  })
   .catch((err) => console.error("Could not connect to MongoDB", err));
 
 // Start server

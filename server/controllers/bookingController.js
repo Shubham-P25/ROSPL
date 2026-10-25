@@ -116,8 +116,7 @@ function timePartOf(isoDateTime) {
 function mapDuffelFlightOffer(offer, { origin, destination, departureDate }) {
   const firstSlice = offer.slices?.[0];
   const firstSegment = firstSlice?.segments?.[0];
-  const lastSegment =
-    firstSlice?.segments?.[firstSlice.segments.length - 1];
+  const lastSegment = firstSlice?.segments?.[firstSlice.segments.length - 1];
 
   const airlineName =
     offer.owner?.name ||
