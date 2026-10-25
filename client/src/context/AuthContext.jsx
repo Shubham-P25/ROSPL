@@ -79,7 +79,15 @@ export const AuthProvider = ({ children }) => {
         });
       }
     } catch (err) {
-      console.warn("Could not fetch current profile:", getErrorMessage(err));
+      if (
+        err.response?.status === 401 ||
+        err.response?.data?.msg === "Token is not valid" ||
+        err.response?.data?.msg?.includes("Token")
+      ) {
+        setAuthData(null, null);
+      } else {
+        console.warn("Could not fetch current profile:", getErrorMessage(err));
+      }
     } finally {
       setLoading(false);
     }

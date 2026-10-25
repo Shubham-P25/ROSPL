@@ -39,4 +39,14 @@ router.delete("/:id", auth, tripController.deleteTrip);
 
 router.post("/:id/share", auth, tripController.shareTrip);
 router.put("/:id/share-toggle", auth, tripController.toggleTripSharing);
+
+// @route   POST api/trips/:id/generate-recommendations
+// @desc    Generate full recommendation plan and populate all trip sections
+// @access  Private
+router.post(
+  "/:id/generate-recommendations",
+  auth,
+  tripController.generateRecommendations,
+);
+
 module.exports = router;

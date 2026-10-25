@@ -34,7 +34,9 @@ import {
   AlertTriangle,
   Globe,
   Edit,
+  Sparkles,
 } from "lucide-react";
+import GenerateRecommendationModal from "./GenerateRecommendationModal";
 
 export const TripDetailPage = () => {
   const { id } = useParams();
@@ -45,7 +47,8 @@ export const TripDetailPage = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Share & Delete state
+  // Share, Delete & Recommendation Planner state
+  const [isRecommendationModalOpen, setIsRecommendationModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [shareLink, setShareLink] = useState("");
   const [copied, setCopied] = useState(false);
@@ -221,7 +224,16 @@ export const TripDetailPage = () => {
             </div>
 
             {/* Glass-Panel Action Buttons */}
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setIsRecommendationModalOpen(true)}
+                className="flex items-center space-x-2 px-5 py-2.5 rounded-full bg-gradient-to-r from-[#944200] to-[#6C2F00] text-white hover:brightness-110 shadow-lg text-xs font-semibold transition-all duration-300 cursor-pointer border border-[#FFB68C]/30"
+              >
+                <Sparkles className="w-4 h-4 text-[#FFDCC2]" />
+                <span>AI Recommendation Plan</span>
+              </button>
+
               <button
                 type="button"
                 onClick={handleShareClick}
@@ -266,14 +278,33 @@ export const TripDetailPage = () => {
 
       {/* ── 3. ACTIVE TAB CONTENT ── */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
-        {activeTab === "overview" && <TripOverviewTab trip={trip} />}
-        {activeTab === "itinerary" && (
-          <TripItineraryTab trip={trip} onTripUpdated={setTrip} />
+        {activeTab === "overview" && (
+          <TripOverviewTab
+            trip={trip}
+            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
+          />
         )}
-        {activeTab === "places" && <TripPlacesTab trip={trip} />}
+        {activeTab === "itinerary" && (
+          <TripItineraryTab
+            trip={trip}
+            onTripUpdated={setTrip}
+            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
+          />
+        )}
+        {activeTab === "places" && (
+          <TripPlacesTab
+            trip={trip}
+            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
+          />
+        )}
         {activeTab === "budget" && <TripBudgetTab trip={trip} />}
         {activeTab === "packing" && <TripPackingTab trip={trip} />}
-        {activeTab === "weather" && <TripWeatherTab trip={trip} />}
+        {activeTab === "weather" && (
+          <TripWeatherTab
+            trip={trip}
+            onOpenPlanner={() => setIsRecommendationModalOpen(true)}
+          />
+        )}
         {activeTab === "emergency" && <TripEmergencyTab trip={trip} />}
         {activeTab === "documents" && <TripDocumentsTab trip={trip} />}
         {activeTab === "notes" && (
@@ -380,6 +411,18 @@ export const TripDetailPage = () => {
             </div>
           </div>
         </Modal>
+      )}
+
+      {/* ── AI RECOMMENDATION PLANNER MODAL ── */}
+      {isRecommendationModalOpen && (
+        <GenerateRecommendationModal
+          isOpen={isRecommendationModalOpen}
+          onClose={() => setIsRecommendationModalOpen(false)}
+          trip={trip}
+          onSuccess={(updatedTrip) => {
+            setTrip(updatedTrip);
+          }}
+        />
       )}
     </div>
   );

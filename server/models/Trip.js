@@ -67,6 +67,13 @@ const TripSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Plan",
+  },
+  planData: {
+    type: mongoose.Schema.Types.Mixed,
+  },
   createdAt: {
     type: Date,
     default: Date.now,

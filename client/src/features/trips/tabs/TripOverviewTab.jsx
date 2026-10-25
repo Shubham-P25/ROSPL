@@ -1,18 +1,14 @@
 import React from "react";
-import { Link } from "react-router-dom";
 import {
-  Calendar,
-  DollarSign,
-  MapPin,
-  CheckSquare,
   Clock,
   Building,
   Plane,
-  ChevronRight,
-  ArrowRight,
+  Sparkles,
+  ExternalLink,
 } from "lucide-react";
+import Button from "../../../components/Button";
 
-export const TripOverviewTab = ({ trip }) => {
+export const TripOverviewTab = ({ trip, onOpenPlanner }) => {
   const {
     destination,
     startDate,
@@ -21,6 +17,7 @@ export const TripOverviewTab = ({ trip }) => {
     activities = [],
     accommodation,
     transportation,
+    planData,
   } = trip;
 
   const calculateDays = () => {
@@ -39,9 +36,48 @@ export const TripOverviewTab = ({ trip }) => {
     <div className="space-y-12">
       {/* ── 1. WELCOME & SNAPSHOT METRICS BAR ── */}
       <section className="space-y-6">
-        <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C1B1B]">
-          Your {destination} Journey
-        </h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <h2 className="font-serif text-3xl sm:text-4xl font-bold text-[#1C1B1B]">
+            Your {destination} Journey
+          </h2>
+
+          {onOpenPlanner && (
+            <Button
+              variant="terracotta"
+              size="sm"
+              onClick={onOpenPlanner}
+              className="shrink-0"
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+              <span>{activities.length > 0 ? "Regenerate Plan" : "Generate AI Plan"}</span>
+            </Button>
+          )}
+        </div>
+
+        {/* Banner if no activities yet */}
+        {activities.length === 0 && onOpenPlanner && (
+          <div className="p-6 bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 text-amber-900 font-bold text-sm">
+                <Sparkles className="w-4 h-4 text-amber-700" />
+                <span>Need an optimized recommendation plan for {destination}?</span>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed max-w-2xl">
+                Get a complete blueprint tailored to your stay: daily itinerary,
+                curated sights with route map, budget split, weather-tailored packing,
+                and local insider notes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={onOpenPlanner}
+              className="px-5 py-2.5 bg-[#6C2F00] hover:bg-[#522300] text-white text-xs font-bold rounded-xl transition-all shadow-sm shrink-0 flex items-center gap-2 cursor-pointer"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Generate Recommendation Plan</span>
+            </button>
+          </div>
+        )}
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-6 py-6 border-y border-[#DAC2B6]/40 bg-[#FFFFFF] px-6 rounded shadow-xs">
           <div>
@@ -82,7 +118,49 @@ export const TripOverviewTab = ({ trip }) => {
         </div>
       </section>
 
-      {/* ── 2. NEXT UP HIGHLIGHT CARD ── */}
+      {/* ── 2. WIKIVOYAGE DESTINATION GUIDE (IF AVAILABLE) ── */}
+      {planData?.guide && (
+        <section className="bg-white p-6 sm:p-8 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+          <div className="flex flex-col md:flex-row gap-6 items-start">
+            {planData.guide.thumbnail && (
+              <img
+                src={planData.guide.thumbnail}
+                alt={planData.guide.title}
+                className="w-full md:w-64 h-40 object-cover rounded-xl shadow-xs border border-slate-100"
+              />
+            )}
+            <div className="space-y-3 flex-1">
+              <div>
+                <span className="text-[11px] font-bold uppercase tracking-wider text-amber-800 block">
+                  DESTINATION BACKGROUND & HERITAGE
+                </span>
+                <h3 className="font-serif text-2xl font-bold text-slate-900">
+                  {planData.guide.title}
+                </h3>
+              </div>
+              <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
+                {planData.guide.extract}
+              </p>
+              <div className="pt-2 flex items-center justify-between text-xs text-slate-400 border-t border-slate-100">
+                <span>{planData.guide.attribution || "CC BY-SA 4.0"}</span>
+                {planData.guide.contentUrl && (
+                  <a
+                    href={planData.guide.contentUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-800 hover:underline font-semibold inline-flex items-center gap-1"
+                  >
+                    <span>Read on Wikivoyage</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </a>
+                )}
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── 3. NEXT UP HIGHLIGHT CARD ── */}
       <section className="bg-[#F6F3F2] p-6 sm:p-8 rounded border border-[#DAC2B6]/40 shadow-xs">
         <div className="flex items-center space-x-2 mb-4 text-[#6C2F00]">
           <Clock className="w-4 h-4" />
@@ -113,15 +191,15 @@ export const TripOverviewTab = ({ trip }) => {
 
           <div className="w-full md:w-56 h-36 rounded overflow-hidden shrink-0 shadow-sm bg-[#1C1B1B]">
             <img
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcahkpz5mpOYMwhwDZUc-EnvmmXYAIBqLSVrANrX2JFWwrDLFgERVUJF2ITaypkYu2inBd4HMzChumhm-VvamON_TXinZrJDM0avsuKoEaCaCwZx0B7Vt4krnF9gH9e1Rqa4Iy1X6sKLCbNu0CBlFx0I8BLagnGvGFMz3lnaV1V9yKKMb9ZXFEGpCDMFl8Sl7h1pipnCtmfs1dFQmUw-3bs4TLBp_i2XnUppxYfVripfsIiZHrdxw2Ww"
-              alt="City Palace courtyard archway"
+              src="https://images.unsplash.com/photo-1599661046227-4d1c87a5b9e1?auto=format&fit=crop&w=500&q=80"
+              alt="Destination courtyard"
               className="w-full h-full object-cover transition-transform duration-700 hover:scale-105"
             />
           </div>
         </div>
       </section>
 
-      {/* ── 3. LOGISTICS (Accommodation & Transit) ── */}
+      {/* ── 4. LOGISTICS (Accommodation & Transit) ── */}
       <section className="grid grid-cols-1 md:grid-cols-2 gap-8">
         {/* Accommodation */}
         <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#DAC2B6]/40 rounded shadow-xs space-y-4">
@@ -138,7 +216,7 @@ export const TripOverviewTab = ({ trip }) => {
                 Hotel / Heritage Haveli
               </span>
               <strong className="text-sm text-[#1C1B1B]">
-                {accommodation?.name || `Taj Lake Palace / Heritage Haveli`}
+                {accommodation?.name || `Heritage Haveli / City Stay`}
               </strong>
             </p>
             {accommodation?.address && (
@@ -149,15 +227,19 @@ export const TripOverviewTab = ({ trip }) => {
                 {accommodation.address}
               </p>
             )}
+            <p className="text-[#877369] pt-2">
+              Bookings and check-in confirmation references can be managed in
+              the Documents tab.
+            </p>
           </div>
         </div>
 
-        {/* Transit */}
+        {/* Transportation */}
         <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#DAC2B6]/40 rounded shadow-xs space-y-4">
           <div className="flex items-center space-x-2 text-[#6C2F00]">
             <Plane className="w-5 h-5" />
             <h4 className="font-serif text-xl font-bold text-[#1C1B1B]">
-              Transit Logistics
+              Transit & Logistics
             </h4>
           </div>
 
@@ -167,25 +249,13 @@ export const TripOverviewTab = ({ trip }) => {
                 Transit Mode
               </span>
               <strong className="text-sm text-[#1C1B1B]">
-                {transportation?.type || "Direct Flight / Express Train"}
+                {transportation?.type || "Local Metro, Auto & Cabs"}
               </strong>
             </p>
-            {transportation?.departureTime && (
-              <p>
-                <span className="text-[#877369] uppercase font-semibold block text-[10px]">
-                  Departure Schedule
-                </span>
-                {new Date(transportation.departureTime).toLocaleDateString(
-                  "en-IN",
-                  {
-                    month: "short",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  },
-                )}
-              </p>
-            )}
+            <p className="text-[#877369] pt-2">
+              Local transport estimates and transit routes are factored
+              directly into your daily itinerary.
+            </p>
           </div>
         </div>
       </section>

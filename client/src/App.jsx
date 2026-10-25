@@ -36,7 +36,6 @@ const SharedTripPage = lazy(() => import("./features/trips/SharedTripPage"));
 
 const TravelToolsPage = lazy(() => import("./features/tools/TravelToolsPage"));
 const ProfilePage = lazy(() => import("./features/profile/ProfilePage"));
-const PlannerPage = lazy(() => import("./features/planner/PlannerPage"));
 
 // Clean minimal suspense fallback
 const PageFallback = () => (
@@ -72,7 +71,7 @@ export function App() {
                   element={<DestinationDetailPage />}
                 />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
-                <Route path="/planner" element={<PlannerPage />} />
+                <Route path="/planner" element={<Navigate to="/my-journey" replace />} />
                 <Route path="/contact" element={<ContactHelpPage />} />
                 <Route path="/help" element={<ContactHelpPage />} />
                 <Route path="/share/:token" element={<SharedTripPage />} />

@@ -12,9 +12,10 @@ import {
   Trash2,
   Clock,
   CheckCircle,
+  Sparkles,
 } from "lucide-react";
 
-export const TripItineraryTab = ({ trip, onTripUpdated }) => {
+export const TripItineraryTab = ({ trip, onTripUpdated, onOpenPlanner }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
@@ -98,14 +99,26 @@ export const TripItineraryTab = ({ trip, onTripUpdated }) => {
             Chart planned excursions, monument visits, and cultural moments.
           </p>
         </div>
-        <Button
-          variant="terracotta"
-          size="sm"
-          onClick={() => setIsAddModalOpen(true)}
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Activity
-        </Button>
+        <div className="flex items-center gap-2">
+          {onOpenPlanner && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onOpenPlanner}
+            >
+              <Sparkles className="w-3.5 h-3.5 mr-1.5 text-[#6C2F00]" />
+              <span>AI Plan</span>
+            </Button>
+          )}
+          <Button
+            variant="terracotta"
+            size="sm"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Add Activity
+          </Button>
+        </div>
       </div>
 
       {sortedActivities.length > 0 ? (
@@ -161,13 +174,27 @@ export const TripItineraryTab = ({ trip, onTripUpdated }) => {
           ))}
         </div>
       ) : (
-        <EmptyState
-          icon={Calendar}
-          title="No Activities Scheduled"
-          description="Build your day-by-day itinerary with monuments, tours, dining, and scenic stops."
-          actionLabel="Add First Activity"
-          onAction={() => setIsAddModalOpen(true)}
-        />
+        <div className="space-y-4">
+          <EmptyState
+            icon={Calendar}
+            title="No Activities Scheduled"
+            description="Build your day-by-day itinerary with monuments, tours, dining, and scenic stops, or generate a tailored daily recommendation plan."
+            actionLabel="Add First Activity"
+            onAction={() => setIsAddModalOpen(true)}
+          />
+          {onOpenPlanner && (
+            <div className="text-center">
+              <Button
+                variant="terracotta"
+                size="md"
+                onClick={onOpenPlanner}
+              >
+                <Sparkles className="w-4 h-4 mr-2" />
+                Generate AI Itinerary Plan
+              </Button>
+            </div>
+          )}
+        </div>
       )}
 
       {/* Add Activity Modal */}

@@ -1,202 +1,192 @@
 import React, { useState, useEffect } from "react";
-import { placesApi } from "../../../services/api/placesApi";
-import { getErrorMessage } from "../../../services/api/client";
 import Badge from "../../../components/Badge";
 import Button from "../../../components/Button";
-import LoadingState from "../../../components/LoadingState";
 import EmptyState from "../../../components/EmptyState";
+import MapView from "../../planner/MapView";
 import {
   Compass,
-  MapPin,
   ExternalLink,
-  Tag,
   Star,
-  Banknote,
-  Search,
-  Filter,
+  Sparkles,
+  Clock,
 } from "lucide-react";
 
-export const TripPlacesTab = ({ trip }) => {
+export const TripPlacesTab = ({ trip, onOpenPlanner }) => {
   const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  useEffect(() => {
+    if (trip?.planData?.places) {
+      setPlaces(Object.values(trip.planData.places));
+    }
+  }, [trip]);
 
   const categories = [
     { id: "all", label: "All Sights" },
-    { id: "SIGHTS", label: "Viewpoints & Mon." },
-    { id: "HISTORICAL", label: "Historic" },
-    { id: "BEACH_PARK", label: "Nature & Parks" },
-    { id: "RESTAURANT", label: "Culinary" },
-    { id: "SHOPPING", label: "Bazaars" },
+    { id: "culture", label: "Historic & Heritage" },
+    { id: "nature", label: "Nature & Views" },
+    { id: "food", label: "Culinary" },
+    { id: "shopping", label: "Bazaars" },
+    { id: "relaxation", label: "Leisure" },
   ];
 
-  const fetchPlaces = async (cats = []) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = { destination: trip.destination };
-      if (cats && cats.length > 0) {
-        payload.categories = cats;
-      }
-      const res = await placesApi.search(payload);
-      if (res.data?.places) {
-        setPlaces(res.data.places);
-      }
-    } catch (err) {
-      console.warn("Places search error:", err);
-      setError(
-        getErrorMessage(
-          err,
-          `Could not load live points of interest for ${trip.destination}. Ensure OpenTripMap API key is set.`,
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (trip.destination) {
-      fetchPlaces(selectedCategory === "all" ? [] : [selectedCategory]);
-    }
-  }, [trip.destination, selectedCategory]);
+  const filteredPlaces = places.filter((p) => {
+    if (selectedCategory === "all") return true;
+    const cat = (p.category || "").toLowerCase();
+    return cat.includes(selectedCategory);
+  });
 
   return (
     <div className="space-y-8">
-      {/* Header & Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[#E5E2E1]">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E2E1]">
         <div>
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[#6C2F00] block mb-1">
-            Attractions & Landmark Discovery
+            EXPLORATION CATALOGUE
           </span>
           <h3 className="font-serif text-2xl font-bold text-[#1C1B1B]">
-            Points of Interest in {trip.destination}
+            Recommended Sights in {trip.destination}
           </h3>
           <p className="text-xs text-[#54433A] mt-1">
-            Curated historical monuments, vistas, and cultural hotspots from
-            OpenTripMap.
+            Curated monuments, viewpoints, and cultural attractions tailored to
+            your itinerary.
           </p>
         </div>
 
-        {/* Category Filters */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 md:pb-0">
+        {onOpenPlanner && (
+          <Button
+            variant="terracotta"
+            size="sm"
+            onClick={onOpenPlanner}
+            className="shrink-0"
+          >
+            <Sparkles className="w-3.5 h-3.5 mr-1.5" />
+            <span>Generate / Refresh Sights</span>
+          </Button>
+        )}
+      </div>
+
+      {/* Interactive MapView */}
+      {trip?.planData?.days && (
+        <div className="space-y-2">
+          <MapView
+            days={trip.planData.days}
+            places={trip.planData.places || {}}
+            selectedDay={1}
+          />
+        </div>
+      )}
+
+      {/* Category filter pills */}
+      {places.length > 0 && (
+        <div className="flex items-center space-x-2 overflow-x-auto pb-2">
           {categories.map((cat) => (
             <button
               key={cat.id}
               type="button"
               onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-full transition-colors whitespace-nowrap ${
+              className={`px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
                 selectedCategory === cat.id
-                  ? "bg-[#6C2F00] text-white"
-                  : "bg-[#FFFFFF] text-[#54433A] border border-[#DAC2B6] hover:border-[#1C1B1B]"
+                  ? "bg-[#6C2F00] text-white shadow-xs"
+                  : "bg-white text-[#54433A] border border-[#DAC2B6] hover:border-[#6C2F00]"
               }`}
             >
               {cat.label}
             </button>
           ))}
         </div>
-      </div>
+      )}
 
-      {/* Content */}
-      {loading ? (
-        <LoadingState
-          message={`Searching points of interest in ${trip.destination}...`}
-        />
-      ) : error ? (
-        <div className="p-8 bg-[#FFDAD6]/30 border border-[#BA1A1A]/30 rounded text-center">
-          <p className="text-xs font-semibold text-[#BA1A1A]">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={() => fetchPlaces()}
-          >
-            Retry Search
-          </Button>
-        </div>
-      ) : places.length > 0 ? (
+      {/* Places Grid */}
+      {places.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {places.map((place) => (
-            <div
-              key={place.id || place.name}
-              className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs hover:border-[#DAC2B6] hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <Badge variant="terracotta" size="xs">
-                    {place.category}
-                  </Badge>
-                  {place.rank > 0 && (
-                    <div className="flex items-center space-x-1 text-[11px] text-[#877369]">
-                      <Star className="w-3 h-3 fill-[#F0BD8B] text-[#F0BD8B]" />
-                      <span>Score {place.rank}</span>
+          {filteredPlaces.map((place, idx) => {
+            const photoUrl =
+              place.photos?.[0]?.url ||
+              place.photoUrl ||
+              "https://images.unsplash.com/photo-1599661046227-4d1c87a5b9e1?auto=format&fit=crop&w=600&q=80";
+
+            return (
+              <div
+                key={place.id || idx}
+                className="bg-white border border-[#E5E2E1] rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group"
+              >
+                <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                  <img
+                    src={photoUrl}
+                    alt={place.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                  />
+                  <div className="absolute top-3 left-3">
+                    <Badge variant="terracotta" size="xs">
+                      {place.category || "Sight"}
+                    </Badge>
+                  </div>
+                  {place.rating && (
+                    <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                      <span>{place.rating.toFixed(1)}</span>
+                    </div>
+                  )}
+                  {place.photos?.[0]?.author && (
+                    <div className="absolute bottom-0 inset-x-0 bg-black/60 backdrop-blur-xs text-[10px] text-white/90 px-2 py-0.5 truncate">
+                      Photo: {place.photos[0].author} (
+                      {place.photos[0].license || "CC"})
                     </div>
                   )}
                 </div>
 
-                <h4 className="font-serif text-xl font-bold text-[#1C1B1B] leading-snug">
-                  {place.name}
-                </h4>
-
-                <div className="flex items-center text-xs text-[#54433A]">
-                  <Banknote className="w-3.5 h-3.5 mr-1.5 text-[#6C2F00]" />
-                  <span>
-                    Est. Admission:{" "}
-                    <strong>
-                      {place.price > 0 ? `₹${place.price}` : "Free / Public"}
-                    </strong>
-                  </span>
-                </div>
-
-                {place.tags && place.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-2">
-                    {place.tags.slice(0, 3).map((tag, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 bg-[#F6F3F2] rounded text-[10px] text-[#877369] uppercase font-mono"
-                      >
-                        #{tag.replace(/_/g, " ")}
-                      </span>
-                    ))}
+                <div className="p-5 flex-1 flex flex-col justify-between space-y-3">
+                  <div className="space-y-1">
+                    <h4 className="font-serif text-lg font-bold text-[#1C1B1B] leading-snug">
+                      {place.name}
+                    </h4>
+                    {place.description && (
+                      <p className="text-xs text-[#54433A] line-clamp-2 leading-relaxed">
+                        {place.description}
+                      </p>
+                    )}
                   </div>
-                )}
-              </div>
 
-              {/* External Links */}
-              {place.bookingLinks && (
-                <div className="mt-6 pt-4 border-t border-[#F0EDED] flex items-center justify-between text-xs font-semibold">
-                  <a
-                    href={place.bookingLinks.googleMaps}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#6C2F00] hover:underline inline-flex items-center"
-                  >
-                    <span>View Map</span>
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
+                  <div className="pt-3 border-t border-[#F2EFEF] flex items-center justify-between text-xs text-[#877369]">
+                    <div className="flex items-center gap-3">
+                      <span className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-[#6C2F00]" />
+                        {place.visitMinutes || 90}m
+                      </span>
+                      <span>
+                        Est:{" "}
+                        <strong className="text-slate-900">
+                          {place.estCost > 0 ? `₹${place.estCost}` : "Free"}
+                        </strong>
+                      </span>
+                    </div>
 
-                  <a
-                    href={place.bookingLinks.tripAdvisor}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#877369] hover:text-[#1C1B1B] inline-flex items-center"
-                  >
-                    <span>TripAdvisor</span>
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
+                    {place.sourceUrl && (
+                      <a
+                        href={place.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[#6C2F00] hover:underline font-semibold inline-flex items-center gap-1 text-[11px]"
+                      >
+                        <span>Learn More</span>
+                        <ExternalLink className="w-3 h-3" />
+                      </a>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <EmptyState
           icon={Compass}
-          title="No Landmarks Found"
-          description={`We could not identify cataloged OpenTripMap landmarks in ${trip.destination} matching the active category.`}
-          actionLabel="View All Categories"
-          onAction={() => setSelectedCategory("all")}
+          title="No Sights Recommended Yet"
+          description={`Generate an AI recommendation plan to discover top sights, monuments, and an interactive route map for ${trip.destination}.`}
+          actionLabel="Generate Recommendation Plan"
+          onAction={onOpenPlanner}
         />
       )}
     </div>
