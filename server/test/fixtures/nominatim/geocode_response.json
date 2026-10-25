@@ -1,0 +1,17 @@
+[
+  {
+    "place_id": 123456,
+    "licence": "Data © OpenStreetMap contributors, ODbL 1.0. https://osm.org/copyright",
+    "osm_type": "relation",
+    "osm_id": 12345,
+    "lat": "26.9124336",
+    "lon": "75.7872709",
+    "class": "boundary",
+    "type": "administrative",
+    "place_rank": 16,
+    "importance": 0.75,
+    "addresstype": "city",
+    "name": "Jaipur",
+    "display_name": "Jaipur, Jaipur Tehsil, Jaipur District, Rajasthan, India"
+  }
+]
