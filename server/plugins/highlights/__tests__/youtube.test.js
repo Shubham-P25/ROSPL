@@ -19,7 +19,9 @@ describe("Highlights Plugin Adapter", () => {
 
     const normalized = normalizeYouTubeItem(raw);
     expect(normalized).not.toBeNull();
-    expect(normalized.title).toBe("Jaipur Travel Guide - 48 Hours in Pink City");
+    expect(normalized.title).toBe(
+      "Jaipur Travel Guide - 48 Hours in Pink City",
+    );
     expect(normalized.channelTitle).toBe("Traveler Channel");
     expect(normalized.url).toBe("https://www.youtube.com/watch?v=dQw4w9WgXcQ");
     expect(normalized.source).toBe("youtube");

@@ -35,7 +35,9 @@ function normalizeGeocode(rawList = []) {
   if (isNaN(lat) || isNaN(lng)) return null;
 
   return {
-    name: item.name || (item.display_name ? item.display_name.split(",")[0] : "Unknown"),
+    name:
+      item.name ||
+      (item.display_name ? item.display_name.split(",")[0] : "Unknown"),
     lat,
     lng,
     displayName: item.display_name || item.name || "",

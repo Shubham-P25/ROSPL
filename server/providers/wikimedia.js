@@ -11,7 +11,8 @@ const { recordProviderStatus } = require("../routes/health");
 const COMMONS_API_URL = "https://commons.wikimedia.org/w/api.php";
 const TIMEOUT_MS = 5000;
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
-const USER_AGENT = "PackGo-TravelPlanner/1.0 (https://github.com/Shubham-P25/ROSPL)";
+const USER_AGENT =
+  "PackGo-TravelPlanner/1.0 (https://github.com/Shubham-P25/ROSPL)";
 
 function stripHtml(html) {
   if (!html || typeof html !== "string") return "";
@@ -36,13 +37,17 @@ function normalizeWikimediaPhoto(rawData) {
   const extmetadata = imageinfo.extmetadata || {};
   const rawArtist = extmetadata.Artist ? extmetadata.Artist.value : "";
   const author = stripHtml(rawArtist) || "Wikimedia Commons Contributor";
-  const license = extmetadata.LicenseShortName ? extmetadata.LicenseShortName.value : "CC BY-SA 4.0";
+  const license = extmetadata.LicenseShortName
+    ? extmetadata.LicenseShortName.value
+    : "CC BY-SA 4.0";
   const licenseUrl = extmetadata.LicenseUrl
     ? extmetadata.LicenseUrl.value
     : "https://creativecommons.org/licenses/";
   const caption = extmetadata.ObjectName
     ? stripHtml(extmetadata.ObjectName.value)
-    : stripHtml(page.title).replace(/^File:/, "").replace(/\.[^.]+$/, "");
+    : stripHtml(page.title)
+        .replace(/^File:/, "")
+        .replace(/\.[^.]+$/, "");
 
   return {
     url: imageinfo.thumburl || imageinfo.url,
@@ -50,7 +55,8 @@ function normalizeWikimediaPhoto(rawData) {
     author,
     license,
     licenseUrl,
-    sourceUrl: imageinfo.descriptionurl || imageinfo.descriptionshorturl || undefined,
+    sourceUrl:
+      imageinfo.descriptionurl || imageinfo.descriptionshorturl || undefined,
   };
 }
 

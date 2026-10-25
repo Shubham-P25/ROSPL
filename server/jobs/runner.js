@@ -178,7 +178,11 @@ async function executeJob(job) {
       coords = null;
     }
 
-    if (!coords || typeof coords.lat !== "number" || typeof coords.lng !== "number") {
+    if (
+      !coords ||
+      typeof coords.lat !== "number" ||
+      typeof coords.lng !== "number"
+    ) {
       const normCity = normalizeCityName(destination);
       coords = SEED_COORDINATES[normCity] || SEED_COORDINATES.jaipur;
       degraded.push("geocoding:seed-fallback");
@@ -271,7 +275,10 @@ async function executeJob(job) {
           ];
         } else {
           try {
-            const photo = await wikimedia.fetchPlacePhoto(place.name, destination);
+            const photo = await wikimedia.fetchPlacePhoto(
+              place.name,
+              destination,
+            );
             if (photo) {
               place.photos = [photo];
               place.photoUrl = photo.url;
@@ -287,7 +294,10 @@ async function executeJob(job) {
     // Currency conversion if requested currency is not INR
     if (job.request.currency && job.request.currency.toUpperCase() !== "INR") {
       try {
-        const rateInfo = await frankfurter.getExchangeRate("INR", job.request.currency);
+        const rateInfo = await frankfurter.getExchangeRate(
+          "INR",
+          job.request.currency,
+        );
         if (rateInfo) {
           planSnapshot.exchangeRate = rateInfo;
         }

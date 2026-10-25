@@ -180,17 +180,25 @@ router.post("/:id/convert-to-trip", async (req, res) => {
       ? new Date(plan.request.startDate)
       : new Date();
     const durationDays = plan.days?.length || plan.request.days || 3;
-    const endDate = new Date(startDate.getTime() + durationDays * 24 * 60 * 60 * 1000);
+    const endDate = new Date(
+      startDate.getTime() + durationDays * 24 * 60 * 60 * 1000,
+    );
 
     const activities = [];
     (plan.days || []).forEach((d) => {
-      const dayDate = new Date(startDate.getTime() + (d.day - 1) * 24 * 60 * 60 * 1000);
+      const dayDate = new Date(
+        startDate.getTime() + (d.day - 1) * 24 * 60 * 60 * 1000,
+      );
       (d.items || []).forEach((item) => {
         const place = (plan.places && plan.places[item.placeId]) || {};
         activities.push({
           name: place.name || "Activity",
           date: dayDate,
-          location: place.address || (place.lat ? `${place.lat.toFixed(4)}, ${place.lng.toFixed(4)}` : plan.request.destination),
+          location:
+            place.address ||
+            (place.lat
+              ? `${place.lat.toFixed(4)}, ${place.lng.toFixed(4)}`
+              : plan.request.destination),
           notes: `${(item.slot || "slot").toUpperCase()} • ${place.category || "activity"} • Est. cost: ₹${place.estCost || 0}`,
         });
       });
@@ -219,11 +227,39 @@ router.post("/:id/convert-to-trip", async (req, res) => {
     if (Array.isArray(plan.packing) && plan.packing.length > 0) {
       const categoryMap = (reason = "") => {
         const r = reason.toLowerCase();
-        if (r.includes("cloth") || r.includes("wear") || r.includes("jacket") || r.includes("rain") || r.includes("warm") || r.includes("towel")) return "Clothing";
-        if (r.includes("toilet") || r.includes("hygiene") || r.includes("sunscreen") || r.includes("brush")) return "Toiletries";
-        if (r.includes("charge") || r.includes("adapter") || r.includes("phone") || r.includes("camera") || r.includes("electronic")) return "Electronics";
-        if (r.includes("pass") || r.includes("id") || r.includes("ticket") || r.includes("doc")) return "Documents";
-        if (r.includes("med") || r.includes("pill") || r.includes("first aid")) return "Medicine";
+        if (
+          r.includes("cloth") ||
+          r.includes("wear") ||
+          r.includes("jacket") ||
+          r.includes("rain") ||
+          r.includes("warm") ||
+          r.includes("towel")
+        )
+          return "Clothing";
+        if (
+          r.includes("toilet") ||
+          r.includes("hygiene") ||
+          r.includes("sunscreen") ||
+          r.includes("brush")
+        )
+          return "Toiletries";
+        if (
+          r.includes("charge") ||
+          r.includes("adapter") ||
+          r.includes("phone") ||
+          r.includes("camera") ||
+          r.includes("electronic")
+        )
+          return "Electronics";
+        if (
+          r.includes("pass") ||
+          r.includes("id") ||
+          r.includes("ticket") ||
+          r.includes("doc")
+        )
+          return "Documents";
+        if (r.includes("med") || r.includes("pill") || r.includes("first aid"))
+          return "Medicine";
         return "Other";
       };
 
@@ -241,10 +277,26 @@ router.post("/:id/convert-to-trip", async (req, res) => {
     // Populate initial estimated expenses
     if (plan.budget) {
       const budgetItems = [
-        { category: "Accommodation", amount: plan.budget.stay, desc: "Estimated Stay / Accommodation" },
-        { category: "Food", amount: plan.budget.food, desc: "Estimated Dining & Street Food" },
-        { category: "Transportation", amount: plan.budget.transport, desc: "Estimated Local Transport & Travel" },
-        { category: "Activities", amount: plan.budget.activities, desc: "Estimated Entry Tickets & Activities" },
+        {
+          category: "Accommodation",
+          amount: plan.budget.stay,
+          desc: "Estimated Stay / Accommodation",
+        },
+        {
+          category: "Food",
+          amount: plan.budget.food,
+          desc: "Estimated Dining & Street Food",
+        },
+        {
+          category: "Transportation",
+          amount: plan.budget.transport,
+          desc: "Estimated Local Transport & Travel",
+        },
+        {
+          category: "Activities",
+          amount: plan.budget.activities,
+          desc: "Estimated Entry Tickets & Activities",
+        },
       ];
       for (const b of budgetItems) {
         if (b.amount > 0) {
@@ -273,7 +325,10 @@ router.post("/:id/convert-to-trip", async (req, res) => {
     });
   } catch (err) {
     return res.status(500).json({
-      error: { code: "SERVER_ERROR", message: err.message || "Failed to convert plan to trip." },
+      error: {
+        code: "SERVER_ERROR",
+        message: err.message || "Failed to convert plan to trip.",
+      },
     });
   }
 });

@@ -1,5 +1,5 @@
 import React from "react";
-import { DollarSign, AlertCircle, PieChart, ShieldCheck } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 export const BudgetPanel = ({ budget, currency = "INR", warnings = [] }) => {
   if (!budget) return null;

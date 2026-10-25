@@ -7,31 +7,80 @@ const { PlaceSchema } = require("../schemas/place");
 const logger = require("../lib/logger");
 const { recordProviderStatus } = require("../routes/health");
 
-const BASE_URL = process.env.OPENTRIPMAP_BASE_URL || "https://api.opentripmap.com/0.1";
+const BASE_URL =
+  process.env.OPENTRIPMAP_BASE_URL || "https://api.opentripmap.com/0.1";
 const LANG = process.env.OPENTRIPMAP_LANG || "en";
 const TIMEOUT_MS = 4000;
 
 function mapKindsToCategory(kindsString = "") {
   const kinds = kindsString.toLowerCase().split(",");
-  if (kinds.some((k) => k.includes("religion") || k.includes("temple") || k.includes("church") || k.includes("mosque"))) {
+  if (
+    kinds.some(
+      (k) =>
+        k.includes("religion") ||
+        k.includes("temple") ||
+        k.includes("church") ||
+        k.includes("mosque"),
+    )
+  ) {
     return "religious";
   }
-  if (kinds.some((k) => k.includes("historic") || k.includes("monument") || k.includes("cultural") || k.includes("museum"))) {
+  if (
+    kinds.some(
+      (k) =>
+        k.includes("historic") ||
+        k.includes("monument") ||
+        k.includes("cultural") ||
+        k.includes("museum"),
+    )
+  ) {
     return "culture";
   }
-  if (kinds.some((k) => k.includes("natural") || k.includes("beach") || k.includes("park") || k.includes("lake"))) {
+  if (
+    kinds.some(
+      (k) =>
+        k.includes("natural") ||
+        k.includes("beach") ||
+        k.includes("park") ||
+        k.includes("lake"),
+    )
+  ) {
     return "nature";
   }
-  if (kinds.some((k) => k.includes("food") || k.includes("restaurant") || k.includes("cafe") || k.includes("culinary"))) {
+  if (
+    kinds.some(
+      (k) =>
+        k.includes("food") ||
+        k.includes("restaurant") ||
+        k.includes("cafe") ||
+        k.includes("culinary"),
+    )
+  ) {
     return "food";
   }
-  if (kinds.some((k) => k.includes("shop") || k.includes("bazaar") || k.includes("market"))) {
+  if (
+    kinds.some(
+      (k) => k.includes("shop") || k.includes("bazaar") || k.includes("market"),
+    )
+  ) {
     return "shopping";
   }
-  if (kinds.some((k) => k.includes("amusement") || k.includes("climb") || k.includes("sport") || k.includes("trail"))) {
+  if (
+    kinds.some(
+      (k) =>
+        k.includes("amusement") ||
+        k.includes("climb") ||
+        k.includes("sport") ||
+        k.includes("trail"),
+    )
+  ) {
     return "adventure";
   }
-  if (kinds.some((k) => k.includes("night") || k.includes("bar") || k.includes("club"))) {
+  if (
+    kinds.some(
+      (k) => k.includes("night") || k.includes("bar") || k.includes("club"),
+    )
+  ) {
     return "nightlife";
   }
   return "other";
@@ -58,7 +107,9 @@ function normalizePlaces(rawPois = []) {
       popularity: Number(normalizedPop.toFixed(2)),
       visitMinutes: 90,
       source: "opentripmap",
-      sourceUrl: poi.xid ? `https://opentripmap.com/en/card/${poi.xid}` : undefined,
+      sourceUrl: poi.xid
+        ? `https://opentripmap.com/en/card/${poi.xid}`
+        : undefined,
     };
 
     const parseResult = PlaceSchema.safeParse(candidate);
@@ -72,9 +123,12 @@ function normalizePlaces(rawPois = []) {
 async function searchPlacesByRadius({ lat, lng, radiusKm = 20 }) {
   const apiKey = process.env.OPENTRIPMAP_API_KEY;
   if (!apiKey || apiKey === "enter_your_api_key") {
-    logger.warn("OpenTripMap API key missing or unconfigured, skipping live call", {
-      provider: "opentripmap",
-    });
+    logger.warn(
+      "OpenTripMap API key missing or unconfigured, skipping live call",
+      {
+        provider: "opentripmap",
+      },
+    );
     recordProviderStatus("opentripmap", false, "API key not configured");
     return [];
   }

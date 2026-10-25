@@ -1,10 +1,7 @@
 import { describe, it, expect } from "vitest";
 const fs = require("fs");
 const path = require("path");
-const {
-  normalizeRate,
-  getOfflineFallbackRate,
-} = require("../frankfurter");
+const { normalizeRate, getOfflineFallbackRate } = require("../frankfurter");
 
 describe("Frankfurter Currency Exchange Provider Adapter", () => {
   it("normalizes fixture rate response correctly", () => {

@@ -12,7 +12,8 @@ const REST_SUMMARY_URL = "https://en.wikivoyage.org/api/rest_v1/page/summary";
 const OPENSEARCH_URL = "https://en.wikivoyage.org/w/api.php";
 const TIMEOUT_MS = 5000;
 const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
-const USER_AGENT = "PackGo-TravelPlanner/1.0 (https://github.com/Shubham-P25/ROSPL)";
+const USER_AGENT =
+  "PackGo-TravelPlanner/1.0 (https://github.com/Shubham-P25/ROSPL)";
 
 function normalizeWikivoyageSummary(rawData) {
   if (!rawData || (!rawData.title && !rawData.extract)) {
@@ -21,12 +22,15 @@ function normalizeWikivoyageSummary(rawData) {
 
   const contentUrl =
     rawData.content_urls?.desktop?.page ||
-    (rawData.title ? `https://en.wikivoyage.org/wiki/${encodeURIComponent(rawData.title)}` : null);
+    (rawData.title
+      ? `https://en.wikivoyage.org/wiki/${encodeURIComponent(rawData.title)}`
+      : null);
 
   return {
     title: rawData.title || "",
     extract: rawData.extract || rawData.description || "",
-    thumbnail: rawData.thumbnail?.source || rawData.originalimage?.source || null,
+    thumbnail:
+      rawData.thumbnail?.source || rawData.originalimage?.source || null,
     contentUrl,
     source: "wikivoyage",
     attribution: "CC BY-SA 4.0 (Wikivoyage contributors)",
@@ -47,7 +51,11 @@ async function searchArticleTitle(query) {
       timeout: TIMEOUT_MS,
     });
 
-    if (Array.isArray(res.data) && Array.isArray(res.data[1]) && res.data[1].length > 0) {
+    if (
+      Array.isArray(res.data) &&
+      Array.isArray(res.data[1]) &&
+      res.data[1].length > 0
+    ) {
       return res.data[1][0];
     }
   } catch (err) {
@@ -72,10 +80,13 @@ async function fetchDestinationSummary(destination) {
     try {
       let res;
       try {
-        res = await axios.get(`${REST_SUMMARY_URL}/${encodeURIComponent(titleToFetch)}`, {
-          headers: { "User-Agent": USER_AGENT },
-          timeout: TIMEOUT_MS,
-        });
+        res = await axios.get(
+          `${REST_SUMMARY_URL}/${encodeURIComponent(titleToFetch)}`,
+          {
+            headers: { "User-Agent": USER_AGENT },
+            timeout: TIMEOUT_MS,
+          },
+        );
       } catch (err) {
         if (err.response?.status === 404 && attempt === 0) {
           const alternate = await searchArticleTitle(titleToFetch);

@@ -98,9 +98,7 @@ async function fetchDestinationHighlights(destination) {
       });
 
       if (res.data?.items && Array.isArray(res.data.items)) {
-        const videos = res.data.items
-          .map(normalizeYouTubeItem)
-          .filter(Boolean);
+        const videos = res.data.items.map(normalizeYouTubeItem).filter(Boolean);
 
         if (videos.length > 0) {
           await cacheSet(cacheKey, videos, { freshMs: THREE_DAYS_MS });
@@ -108,10 +106,13 @@ async function fetchDestinationHighlights(destination) {
         }
       }
     } catch (err) {
-      logger.debug("YouTube API highlights search failed, using curated fallback", {
-        destination,
-        error: err.message,
-      });
+      logger.debug(
+        "YouTube API highlights search failed, using curated fallback",
+        {
+          destination,
+          error: err.message,
+        },
+      );
     }
   }
 

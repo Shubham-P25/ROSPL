@@ -17,18 +17,28 @@ function normalizeWeather(rawData, locationName = "Destination") {
     return null;
   }
 
-  const { time, temperature_2m_max, temperature_2m_min, precipitation_probability_max } =
-    rawData.daily;
+  const {
+    time,
+    temperature_2m_max,
+    temperature_2m_min,
+    precipitation_probability_max,
+  } = rawData.daily;
 
   const daily = time.map((date, idx) => ({
     date,
     tempMax: temperature_2m_max ? temperature_2m_max[idx] : null,
     tempMin: temperature_2m_min ? temperature_2m_min[idx] : null,
-    rainProb: precipitation_probability_max ? precipitation_probability_max[idx] : 0,
+    rainProb: precipitation_probability_max
+      ? precipitation_probability_max[idx]
+      : 0,
   }));
 
-  const maxTempAll = temperature_2m_max?.length ? Math.max(...temperature_2m_max) : 28;
-  const minTempAll = temperature_2m_min?.length ? Math.min(...temperature_2m_min) : 18;
+  const maxTempAll = temperature_2m_max?.length
+    ? Math.max(...temperature_2m_max)
+    : 28;
+  const minTempAll = temperature_2m_min?.length
+    ? Math.min(...temperature_2m_min)
+    : 18;
   const maxRainProb = precipitation_probability_max?.length
     ? Math.max(...precipitation_probability_max)
     : 10;
@@ -44,7 +54,11 @@ function normalizeWeather(rawData, locationName = "Destination") {
   };
 }
 
-async function fetchWeatherForecast({ lat, lng, locationName = "Destination" }) {
+async function fetchWeatherForecast({
+  lat,
+  lng,
+  locationName = "Destination",
+}) {
   if (lat === undefined || lng === undefined) return null;
 
   const cacheKey = `openmeteo:forecast:${lat.toFixed(2)}:${lng.toFixed(2)}`;

@@ -16,12 +16,14 @@ describe("Wikimedia Commons Photo Provider Adapter", () => {
     expect(photo.url).toContain("Amber_Fort_Jaipur.jpg");
     expect(photo.author).toBe("Flicka");
     expect(photo.license).toBe("CC BY-SA 3.0");
-    expect(photo.licenseUrl).toBe("https://creativecommons.org/licenses/by-sa/3.0");
+    expect(photo.licenseUrl).toBe(
+      "https://creativecommons.org/licenses/by-sa/3.0",
+    );
     expect(photo.caption).toBe("Amer Fort, Jaipur");
   });
 
   it("safely strips html tags from author metadata", () => {
-    expect(stripHtml("<a href=\"http://example.com\">John &amp; Jane</a>")).toBe(
+    expect(stripHtml('<a href="http://example.com">John &amp; Jane</a>')).toBe(
       "John &amp; Jane",
     );
     expect(stripHtml(null)).toBe("");
@@ -30,6 +32,8 @@ describe("Wikimedia Commons Photo Provider Adapter", () => {
   it("handles empty or missing pages gracefully", () => {
     expect(normalizeWikimediaPhoto(null)).toBeNull();
     expect(normalizeWikimediaPhoto({})).toBeNull();
-    expect(normalizeWikimediaPhoto({ query: { pages: { "-1": {} } } })).toBeNull();
+    expect(
+      normalizeWikimediaPhoto({ query: { pages: { "-1": {} } } }),
+    ).toBeNull();
   });
 });

@@ -14,8 +14,26 @@ const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
 
 // Static offline fallback rates for top currencies
 const STATIC_FALLBACK_RATES = {
-  USD: { INR: 84.5, EUR: 0.92, GBP: 0.79, JPY: 153.2, AUD: 1.52, CAD: 1.38, SGD: 1.32, AED: 3.67, THB: 34.2 },
-  INR: { USD: 0.0118, EUR: 0.0109, GBP: 0.0093, JPY: 1.81, AED: 0.0434, THB: 0.405, USD_REF: 84.5 },
+  USD: {
+    INR: 84.5,
+    EUR: 0.92,
+    GBP: 0.79,
+    JPY: 153.2,
+    AUD: 1.52,
+    CAD: 1.38,
+    SGD: 1.32,
+    AED: 3.67,
+    THB: 34.2,
+  },
+  INR: {
+    USD: 0.0118,
+    EUR: 0.0109,
+    GBP: 0.0093,
+    JPY: 1.81,
+    AED: 0.0434,
+    THB: 0.405,
+    USD_REF: 84.5,
+  },
   EUR: { USD: 1.08, INR: 91.5, GBP: 0.86, JPY: 166.0 },
   GBP: { USD: 1.26, EUR: 1.16, INR: 106.8 },
 };

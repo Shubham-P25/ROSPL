@@ -75,6 +75,22 @@ Whether you're planning a weekend getaway or a month-long adventure, PackGo keep
 
 ## ✨ Features
 
+### 🧭 Reliable AI Trip Planner ($0, Open-Source & Zero-Key Capable)
+
+- **Pure Deterministic Planner Core**: Algorithmic engine for candidate place scoring, k-means geographic clustering, 2-opt TSP routing, and optimal morning/afternoon/evening time slotting.
+- **Resilient Multi-Provider Fallback Chain**:
+  - 📍 **Geocoding**: OpenStreetMap Nominatim with 1 req/sec rate-limiting & 90-day caching, falling back to curated coordinates.
+  - 🏛️ **Places Discovery**: OpenTripMap API with seamless fallback to curated seed packs (`jaipur.json`, `goa.json`, `varanasi.json`).
+  - ⛅ **Weather Forecast**: Open-Meteo API (free, open-source, no key required).
+  - 📖 **Destination Guides**: MediaWiki REST API (Wikivoyage CC BY-SA 4.0 summaries).
+  - 📸 **High-Resolution Imagery**: Wikimedia Commons API with complete CC license & author attribution parsing.
+  - 💱 **Exchange Rates**: Frankfurter API (open-source ECB data) with offline rate tables.
+- **Interactive Leaflet Route Maps**: Numbered pins matching daily visiting sequence and route polylines connecting stops with zero paid map keys.
+- **PackGo Journey Integration**: One-click "Save as Journey" converts the blueprint directly into PackGo's native `Trip`, `PackingList`, and `Expense` trackers.
+- **Client-Side Bring-Your-Own-Key (BYOK) AI Assistant**:
+  - Optional Google Gemini (free tier) integration running **strictly inside the client browser**.
+  - **Zero Server Leakage**: User API keys are stored solely in browser `localStorage` and never transmitted to backend servers.
+
 ### 🗺️ Trip Management
 
 - Create, edit, and delete trips with **destination autocomplete**

@@ -12,7 +12,6 @@ import FeaturedGuides from "./FeaturedGuides";
 import AssistantPanel from "./AssistantPanel";
 import Button from "../../components/Button";
 import {
-  Sparkles,
   Calendar,
   DollarSign,
   CheckSquare,
