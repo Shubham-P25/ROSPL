@@ -1,7 +1,7 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useMemo } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { MapPin, Navigation, Compass, Clock, Tag } from "lucide-react";
+import { Compass, Navigation, MapPin, Layers, LocateFixed } from "lucide-react";
 
 // Fix default leaflet icon paths if standard markers are ever used
 delete L.Icon.Default.prototype._getIconUrl;
@@ -12,77 +12,218 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
 
-export default function MapView({ days = [], places = {}, selectedDay = 1, onSelectDay }) {
+function escapeHtml(str) {
+  if (!str || typeof str !== "string") return "";
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+const DAY_COLORS = [
+  "#6C2F00", // Terracotta
+  "#0369A1", // Sky Blue
+  "#15803D", // Forest Green
+  "#7E22CE", // Purple
+  "#C2410C", // Rust Orange
+  "#B91C1C", // Crimson
+  "#0F766E", // Deep Teal
+];
+
+const osrmRouteCache = new Map();
+
+async function fetchOsrmRoute(latLngs) {
+  if (!latLngs || latLngs.length < 2) return null;
+  const key = latLngs
+    .map(([lat, lng]) => `${lat.toFixed(4)},${lng.toFixed(4)}`)
+    .join(";");
+  if (osrmRouteCache.has(key)) return osrmRouteCache.get(key);
+
+  const coordsStr = latLngs.map(([lat, lng]) => `${lng},${lat}`).join(";");
+  try {
+    const res = await fetch(
+      `https://router.project-osrm.org/route/v1/driving/${coordsStr}?overview=full&geometries=geojson`,
+      { signal: AbortSignal.timeout(3500) },
+    );
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.code === "Ok" && data.routes?.[0]?.geometry?.coordinates) {
+      const line = data.routes[0].geometry.coordinates.map(([lng, lat]) => [
+        lat,
+        lng,
+      ]);
+      osrmRouteCache.set(key, line);
+      return line;
+    }
+    return null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+export default function MapView({
+  days = [],
+  places = {},
+  selectedDay = 1,
+  onSelectDay,
+}) {
   const mapContainerRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const layerGroupRef = useRef(null);
-  const [activePlace, setActivePlace] = useState(null);
+  const markerMapRef = useRef(new Map());
 
-  const activeDayData = days.find((d) => d.day === selectedDay) || days[0];
-  const dayItems = activeDayData ? activeDayData.items : [];
+  const [viewMode, setViewMode] = useState(
+    selectedDay === "all" ? "all" : "day",
+  ); // 'day' | 'all'
+  const activeDayNumber = typeof selectedDay === "number" ? selectedDay : 1;
 
-  // Extract valid ordered stops with coordinates
-  const stops = dayItems
-    .map((item, idx) => {
-      const place = places[item.placeId];
-      if (!place || typeof place.lat !== "number" || typeof place.lng !== "number") {
-        return null;
-      }
-      return {
-        ...place,
-        order: idx + 1,
-        slot: item.slot,
-        travelTime: item.travelMinutesFromPrev,
-      };
-    })
-    .filter(Boolean);
-
-  useEffect(() => {
-    if (!mapContainerRef.current) return;
-
-    // Initialize map once
-    if (!mapInstanceRef.current) {
-      const map = L.map(mapContainerRef.current, {
-        zoomControl: true,
-        scrollWheelZoom: true,
+  // Compute stops data with useMemo
+  const stops = useMemo(() => {
+    if (viewMode === "all") {
+      const allStops = [];
+      days.forEach((d) => {
+        const color = DAY_COLORS[(d.day - 1) % DAY_COLORS.length];
+        (d.items || []).forEach((item, idx) => {
+          const place = places[item.placeId];
+          if (
+            place &&
+            typeof place.lat === "number" &&
+            typeof place.lng === "number"
+          ) {
+            allStops.push({
+              ...place,
+              dayNumber: d.day,
+              order: idx + 1,
+              slot: item.slot,
+              travelTime: item.travelMinutesFromPrev,
+              color,
+              globalId: `${d.day}-${place.id || idx}`,
+            });
+          }
+        });
       });
-
-      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-        attribution:
-          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors',
-        maxZoom: 19,
-      }).addTo(map);
-
-      layerGroupRef.current = L.layerGroup().addTo(map);
-      mapInstanceRef.current = map;
+      return allStops;
     }
 
+    const activeDayData = days.find((d) => d.day === activeDayNumber) || days[0];
+    const dayItems = activeDayData ? activeDayData.items || [] : [];
+    const color = DAY_COLORS[(activeDayNumber - 1) % DAY_COLORS.length];
+
+    return dayItems
+      .map((item, idx) => {
+        const place = places[item.placeId];
+        if (
+          !place ||
+          typeof place.lat !== "number" ||
+          typeof place.lng !== "number"
+        ) {
+          return null;
+        }
+        return {
+          ...place,
+          dayNumber: activeDayNumber,
+          order: idx + 1,
+          slot: item.slot,
+          travelTime: item.travelMinutesFromPrev,
+          color,
+          globalId: `${activeDayNumber}-${place.id || idx}`,
+        };
+      })
+      .filter(Boolean);
+  }, [days, places, activeDayNumber, viewMode]);
+
+  // Stable key for redraw dependency
+  const stopsStableKey = useMemo(() => {
+    return stops.map((s) => `${s.globalId}:${s.lat.toFixed(4)},${s.lng.toFixed(4)}`).join("|");
+  }, [stops]);
+
+  // ── EFFECT 1: Map Initialization (runs once) ──
+  useEffect(() => {
+    if (!mapContainerRef.current || mapInstanceRef.current) return;
+
+    // CARTO Voyager Tile Layer (clean, free, no hospital icons, OSM attribution)
+    const map = L.map(mapContainerRef.current, {
+      zoomControl: true,
+      scrollWheelZoom: true,
+    });
+
+    L.tileLayer(
+      "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png",
+      {
+        attribution:
+          '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions" target="_blank" rel="noopener noreferrer">CARTO</a>',
+        subdomains: "abcd",
+        maxZoom: 19,
+      },
+    ).addTo(map);
+
+    layerGroupRef.current = L.layerGroup().addTo(map);
+    mapInstanceRef.current = map;
+
+    // ResizeObserver to handle tab changes & container sizing automatically
+    const ro = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+    ro.observe(mapContainerRef.current);
+
+    // Initial size invalidation
+    requestAnimationFrame(() => {
+      map.invalidateSize();
+    });
+
+    return () => {
+      ro.disconnect();
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // ── EFFECT 2: Redraw Markers & Polyline when stops change ──
+  useEffect(() => {
     const map = mapInstanceRef.current;
     const layerGroup = layerGroupRef.current;
+    if (!map || !layerGroup) return;
+
     layerGroup.clearLayers();
+    markerMapRef.current.clear();
 
     if (stops.length === 0) {
-      // Default view
-      map.setView([26.9124, 75.7872], 12);
+      map.setView([19.076, 72.8777], 11);
       return;
     }
 
     const latLngs = [];
 
+    // Group stops by day to draw routes per day
+    const dayGroups = new Map();
+
     stops.forEach((stop) => {
       const latLng = [stop.lat, stop.lng];
       latLngs.push(latLng);
 
-      // Create rich custom numbered pin
+      if (!dayGroups.has(stop.dayNumber)) {
+        dayGroups.set(stop.dayNumber, []);
+      }
+      dayGroups.get(stop.dayNumber).push(latLng);
+
+      const color = stop.color || "#6C2F00";
+
+      // Numbered pin with clean SVG / CSS styling
       const iconHtml = `
         <div style="
-          width: 34px;
-          height: 34px;
-          background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+          width: 32px;
+          height: 32px;
+          background: ${color};
           color: white;
           border-radius: 50% 50% 50% 0;
           transform: rotate(-45deg);
-          box-shadow: 0 4px 12px rgba(79, 70, 229, 0.45);
+          box-shadow: 0 4px 10px rgba(0,0,0,0.3);
           display: flex;
           align-items: center;
           justify-content: center;
@@ -92,94 +233,153 @@ export default function MapView({ days = [], places = {}, selectedDay = 1, onSel
           <span style="
             transform: rotate(45deg);
             font-weight: 700;
-            font-size: 13px;
+            font-size: 12px;
             font-family: inherit;
           ">${stop.order}</span>
         </div>
       `;
 
       const customIcon = L.divIcon({
-        className: "custom-leaflet-marker",
+        className: "packgo-map-marker",
         html: iconHtml,
-        iconSize: [34, 34],
-        iconAnchor: [17, 34],
-        popupAnchor: [0, -32],
+        iconSize: [32, 32],
+        iconAnchor: [16, 32],
+        popupAnchor: [0, -30],
       });
 
-      const photoUrl =
-        (stop.photos && stop.photos[0]?.url) ||
-        stop.photoUrl ||
-        "https://images.unsplash.com/photo-1488646953014-85cb44e25828?auto=format&fit=crop&w=400&q=80";
+      // Escape all HTML content to guarantee security
+      const safeName = escapeHtml(stop.name);
+      const safeCategory = escapeHtml(stop.category || "Sight");
+      const safeDesc = escapeHtml(
+        stop.description ? `${stop.description.slice(0, 120)}...` : "",
+      );
+      const verifiedPhoto =
+        stop.photos?.[0]?.url || stop.photoUrl || null;
+
+      let photoHtml = "";
+      if (verifiedPhoto) {
+        photoHtml = `<img src="${escapeHtml(verifiedPhoto)}" alt="${safeName}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />`;
+      } else {
+        photoHtml = `
+          <div style="width: 100%; height: 80px; background: linear-gradient(135deg, ${color} 0%, #1c1b1b 100%); border-radius: 8px; margin-bottom: 8px; display: flex; align-items: center; justify-content: center; color: #ffecd6; font-size: 11px; font-weight: 600; text-transform: uppercase;">
+            ${safeCategory}
+          </div>
+        `;
+      }
 
       const popupContent = `
-        <div style="min-width: 200px; max-width: 260px; font-family: system-ui, sans-serif;">
-          <img src="${photoUrl}" alt="${stop.name}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 6px; margin-bottom: 8px;" />
-          <div style="font-weight: 700; font-size: 14px; color: #0f172a; margin-bottom: 4px;">#${stop.order} ${stop.name}</div>
-          <div style="font-size: 12px; color: #64748b; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
-            <span style="display: inline-block; padding: 2px 6px; background: #e0e7ff; color: #4338ca; border-radius: 4px; font-weight: 600; text-transform: capitalize;">${stop.category || "Place"}</span>
+        <div style="min-width: 210px; max-width: 260px; font-family: system-ui, sans-serif;">
+          ${photoHtml}
+          <div style="font-weight: 700; font-size: 14px; color: #1c1b1b; margin-bottom: 4px;">
+            ${viewMode === "all" ? `D${stop.dayNumber} · ` : ""}#${stop.order} ${safeName}
+          </div>
+          <div style="font-size: 11px; color: #54433a; margin-bottom: 6px; display: flex; align-items: center; gap: 4px;">
+            <span style="padding: 2px 6px; background: #f6f3f2; color: #6c2f00; border-radius: 4px; font-weight: 600; text-transform: capitalize;">${safeCategory}</span>
             <span>•</span>
             <span>${stop.visitMinutes || 90} mins</span>
           </div>
-          ${stop.description ? `<p style="font-size: 12px; color: #334155; margin: 0; line-height: 1.4;">${stop.description.slice(0, 100)}...</p>` : ""}
+          ${safeDesc ? `<p style="font-size: 11px; color: #54433a; margin: 0; line-height: 1.4;">${safeDesc}</p>` : ""}
         </div>
       `;
 
       const marker = L.marker(latLng, { icon: customIcon });
       marker.bindPopup(popupContent);
-      marker.on("click", () => setActivePlace(stop));
       marker.addTo(layerGroup);
+      markerMapRef.current.set(stop.globalId, marker);
     });
 
-    // Draw route polyline between consecutive stops
-    if (latLngs.length > 1) {
-      L.polyline(latLngs, {
-        color: "#6366f1",
+    // Draw route lines for each day group
+    dayGroups.forEach((dayLatLngs, dayNum) => {
+      if (dayLatLngs.length < 2) return;
+      const dayColor = DAY_COLORS[(dayNum - 1) % DAY_COLORS.length];
+
+      // Draw dashed straight-line fallback immediately
+      const polyline = L.polyline(dayLatLngs, {
+        color: dayColor,
         weight: 3.5,
         opacity: 0.85,
         dashArray: "6, 8",
         lineCap: "round",
         lineJoin: "round",
       }).addTo(layerGroup);
+
+      // Attempt OSRM real road route async and replace on success
+      fetchOsrmRoute(dayLatLngs).then((roadPoints) => {
+        if (roadPoints && roadPoints.length > 0 && mapInstanceRef.current) {
+          layerGroup.removeLayer(polyline);
+          L.polyline(roadPoints, {
+            color: dayColor,
+            weight: 4,
+            opacity: 0.9,
+            lineCap: "round",
+            lineJoin: "round",
+          }).addTo(layerGroup);
+        }
+      });
+    });
+
+    // Fit map bounds cleanly
+    if (latLngs.length > 0) {
+      const bounds = L.latLngBounds(latLngs);
+      requestAnimationFrame(() => {
+        map.invalidateSize();
+        map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 });
+      });
     }
+  }, [stopsStableKey, viewMode]);
 
-    // Fit map bounds to show all markers
-    const bounds = L.latLngBounds(latLngs);
-    map.fitBounds(bounds, { padding: [45, 45], maxZoom: 15 });
-  }, [stops, selectedDay]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-      }
-    };
-  }, []);
+  const handleLocateStop = (stop) => {
+    const map = mapInstanceRef.current;
+    if (!map) return;
+    map.flyTo([stop.lat, stop.lng], 15, { duration: 0.8 });
+    const marker = markerMapRef.current.get(stop.globalId);
+    if (marker) {
+      setTimeout(() => {
+        marker.openPopup();
+      }, 850);
+    }
+  };
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden flex flex-col">
-      {/* Map Header with Day selector & stats */}
-      <div className="p-4 border-b border-slate-100 bg-slate-50/70 flex flex-wrap items-center justify-between gap-3">
+    <div className="bg-white rounded-2xl shadow-xs border border-[#E5E2E1] overflow-hidden flex flex-col">
+      {/* ── Subheader with Day & All-Days Toggles ── */}
+      <div className="p-3.5 sm:p-4 border-b border-[#E5E2E1] bg-[#FCF9F8] flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <Compass className="w-5 h-5 text-indigo-600" />
-          <h3 className="font-semibold text-slate-800 text-sm">Interactive Route Map</h3>
-          <span className="text-xs text-slate-500 font-medium ml-1">
-            ({stops.length} mapped {stops.length === 1 ? "stop" : "stops"})
+          <Compass className="w-4 h-4 text-[#6C2F00]" />
+          <h4 className="font-serif font-bold text-[#1C1B1B] text-sm">
+            Interactive Waypoint &amp; Transit Map
+          </h4>
+          <span className="text-[11px] text-[#7A6B63] font-medium ml-1">
+            ({stops.length} {stops.length === 1 ? "stop" : "stops"})
           </span>
         </div>
 
-        {/* Day selection tabs */}
-        <div className="flex items-center gap-1 overflow-x-auto py-1">
+        {/* Day selection tabs + All Days toggle */}
+        <div className="flex items-center gap-1.5 overflow-x-auto py-0.5">
+          <button
+            type="button"
+            onClick={() => setViewMode("all")}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+              viewMode === "all"
+                ? "bg-[#1C1B1B] text-white shadow-xs"
+                : "bg-white text-[#54433A] hover:bg-[#F6F3F2] border border-[#DAC2B6]/40"
+            }`}
+          >
+            All Days
+          </button>
+
           {days.map((d) => (
             <button
               key={d.day}
               type="button"
-              onClick={() => onSelectDay && onSelectDay(d.day)}
-              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${
-                selectedDay === d.day
-                  ? "bg-indigo-600 text-white shadow-sm"
-                  : "bg-white text-slate-600 hover:bg-slate-100 border border-slate-200"
+              onClick={() => {
+                setViewMode("day");
+                if (onSelectDay) onSelectDay(d.day);
+              }}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                viewMode === "day" && activeDayNumber === d.day
+                  ? "bg-[#6C2F00] text-white shadow-xs"
+                  : "bg-white text-[#54433A] hover:bg-[#F6F3F2] border border-[#DAC2B6]/40"
               }`}
             >
               Day {d.day}
@@ -188,61 +388,61 @@ export default function MapView({ days = [], places = {}, selectedDay = 1, onSel
         </div>
       </div>
 
-      {/* Map container */}
-      <div className="relative w-full h-[420px] bg-slate-100">
+      {/* ── Map Canvas ── */}
+      <div className="relative w-full h-[400px] sm:h-[450px] bg-[#F6F3F2]">
         <div ref={mapContainerRef} className="w-full h-full z-0" />
+      </div>
 
-        {/* Floating Quick Legend */}
-        <div className="absolute top-3 right-3 z-10 bg-white/95 backdrop-blur-sm border border-slate-200/80 rounded-xl px-3 py-2 text-xs shadow-md">
-          <div className="font-semibold text-slate-700 flex items-center gap-1.5 mb-1">
-            <Navigation className="w-3.5 h-3.5 text-indigo-600" />
-            Route Sequence
+      {/* ── Stops Directory List (Visible at all zoom levels) ── */}
+      {stops.length > 0 && (
+        <div className="p-4 bg-white border-t border-[#E5E2E1] max-h-56 overflow-y-auto">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#6C2F00]">
+              Numbered Route Sequence
+            </span>
+            <span className="text-[11px] text-[#7A6B63]">
+              Click Locate to zoom to any stop
+            </span>
           </div>
-          <div className="text-[11px] text-slate-500 flex items-center gap-1">
-            <span className="w-2 h-2 rounded-full bg-indigo-600 inline-block"></span>
-            Numbered pins indicate optimal daily visiting order
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {stops.map((stop) => (
+              <div
+                key={stop.globalId}
+                className="p-2.5 rounded-lg border border-[#E5E2E1] hover:border-[#6C2F00]/40 bg-[#FCF9F8] flex items-center justify-between text-xs transition-colors"
+              >
+                <div className="flex items-center space-x-2.5 min-w-0 pr-2">
+                  <span
+                    style={{ backgroundColor: stop.color }}
+                    className="w-5 h-5 rounded-full text-white font-bold flex items-center justify-center text-[10px] shrink-0"
+                  >
+                    {stop.order}
+                  </span>
+                  <div className="truncate">
+                    <span className="font-semibold text-[#1C1B1B] block truncate">
+                      {stop.name}
+                    </span>
+                    <span className="text-[10px] text-[#7A6B63] capitalize block">
+                      {viewMode === "all" ? `Day ${stop.dayNumber} · ` : ""}
+                      {stop.slot} • {stop.category || "Sight"}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleLocateStop(stop)}
+                  title="Locate stop on map"
+                  className="px-2 py-1 rounded bg-white hover:bg-[#6C2F00] hover:text-white border border-[#DAC2B6]/40 text-[#6C2F00] font-semibold text-[10px] flex items-center space-x-1 shrink-0 transition-colors cursor-pointer"
+                >
+                  <LocateFixed className="w-3 h-3" />
+                  <span>Locate</span>
+                </button>
+              </div>
+            ))}
           </div>
         </div>
-
-        {/* Selected Place Overlay Card */}
-        {activePlace && (
-          <div className="absolute bottom-3 left-3 right-3 sm:right-auto sm:max-w-xs z-10 bg-white rounded-xl shadow-lg border border-slate-200 p-3 animate-in fade-in slide-in-from-bottom-2">
-            <div className="flex items-start justify-between gap-2 mb-1.5">
-              <div className="font-bold text-sm text-slate-900 truncate">
-                #{activePlace.order} {activePlace.name}
-              </div>
-              <button
-                type="button"
-                onClick={() => setActivePlace(null)}
-                className="text-slate-400 hover:text-slate-600 text-xs font-bold px-1"
-              >
-                ✕
-              </button>
-            </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 mb-2">
-              <span className="px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 font-medium capitalize">
-                {activePlace.category}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="w-3 h-3" />
-                {activePlace.visitMinutes || 90}m
-              </span>
-              <span>₹{activePlace.estCost || 0}</span>
-            </div>
-            {activePlace.description && (
-              <p className="text-xs text-slate-600 line-clamp-2">
-                {activePlace.description}
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      {/* Attribution footer */}
-      <div className="px-4 py-2 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-400">
-        <span>© OpenStreetMap contributors • Open-source geographic routing</span>
-        <span>Leaflet Engine</span>
-      </div>
+      )}
     </div>
   );
 }
