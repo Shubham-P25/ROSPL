@@ -1,0 +1,92 @@
+[
+  {
+    "destination": "Jaipur",
+    "airport": "Jaipur International Airport (JAI), Sanganer (~12 km from city center)",
+    "railway": "Jaipur Junction (JP), Durgapura (DPA), Gandhinagar Jaipur (GAD)",
+    "localTransit": "Jaipur Metro (Pink Line connecting Mansarovar to Badi Chaupar), auto-rickshaws, pre-paid taxis, and app-based cabs (Uber, Ola)",
+    "intercityBus": "Sindhi Camp Central Bus Stand (RSRTC state buses and private deluxe coaches)",
+    "notes": "Verify live train and bus schedules via official IRCTC / RSRTC portals before departure.",
+    "verify": true
+  },
+  {
+    "destination": "Goa",
+    "airport": "Dabolim Airport (GOI) in South Goa and Manohar International Airport, Mopa (GOX) in North Goa",
+    "railway": "Madgaon Junction (MAO), Thivim (THVM), Vasco da Gama (VSG), Karmali (KRMI)",
+    "localTransit": "Self-drive scooter/car rentals, pilot motorcycle taxis, GoaMiles app-based cabs, and Kadamba state transport buses",
+    "intercityBus": "Panaji KTC Bus Stand, Mapusa KTC Bus Stand, and Margao KTC Bus Stand",
+    "notes": "Always carry a valid driving license for rental vehicles. Verify ferry crossings for river transit.",
+    "verify": true
+  },
+  {
+    "destination": "Manali",
+    "airport": "Kullu-Manali Airport, Bhuntar (KUU), approximately 50 km south of Manali",
+    "railway": "Nearest broad-gauge railhead is Chandigarh Railway Station (CDG, ~310 km) or Ambala Cantt",
+    "localTransit": "Local taxis (Himachal Pradesh Tourism Development Corporation / Manali Taxi Union), auto-rickshaws, and private rental motorbikes",
+    "intercityBus": "Himachal Road Transport Corporation (HRTC) Volvos and private overnight sleeper buses from Delhi and Chandigarh",
+    "notes": "Rohtang Pass permits must be obtained online in advance. Highway conditions vary during winter snowfall and monsoon; check live HRTC advisories.",
+    "verify": true
+  },
+  {
+    "destination": "Mumbai",
+    "airport": "Chhatrapati Shivaji Maharaj International Airport (BOM), Terminal 1 (Domestic) & Terminal 2 (International/Domestic)",
+    "railway": "Chhatrapati Shivaji Maharaj Terminus (CSMT), Mumbai Central (MMCT), Bandra Terminus (BDTS), Lokmanya Tilak Terminus (LTT), Dadar (DR)",
+    "localTransit": "Mumbai Suburban Railway (Western, Central, Harbour lines), Mumbai Metro, BEST public buses, metered black-and-yellow taxis, and autorickshaws (suburbs only)",
+    "intercityBus": "MSRTC State transport bus terminals and private bus hubs at Dadar, Borivali, and Vashi",
+    "notes": "Peak rush hours on suburban local trains are 08:30-11:30 and 17:30-20:30 on weekdays. Verify coastal road and sealink access timings.",
+    "verify": true
+  },
+  {
+    "destination": "Delhi",
+    "airport": "Indira Gandhi International Airport (DEL), Terminals 1, 2, and 3",
+    "railway": "New Delhi Railway Station (NDLS), Old Delhi (DLI), Hazrat Nizamuddin (NZM), Anand Vihar Terminal (ANVT), Delhi Sarai Rohilla (DEE)",
+    "localTransit": "Delhi Metro (extensive network with Airport Express Line), DTC electric/CNG buses, metered auto-rickshaws, and ride-hailing cabs",
+    "intercityBus": "Inter-State Bus Terminals (ISBT) at Kashmere Gate, Anand Vihar, and Sarai Kale Khan",
+    "notes": "The Delhi Metro Smart Card or digital QR tickets via DMRC app offer seamless travel across the capital region.",
+    "verify": true
+  },
+  {
+    "destination": "Varanasi",
+    "airport": "Lal Bahadur Shastri International Airport, Babatpur (VNS, ~26 km northwest of the city)",
+    "railway": "Varanasi Junction (BSB), Banaras (BSBS / formerly Manduadih), Pt. Deen Dayal Upadhyaya Junction (DDU, ~18 km away)",
+    "localTransit": "Hand-rowed and motor boats along the Ganga Ghats, cycle-rickshaws, e-rickshaws, auto-rickshaws, and app cabs",
+    "intercityBus": "UPSRTC Bus Stand near Varanasi Junction Railway Station",
+    "notes": "Old city alleyways (galis) leading to the Ghats are pedestrian-only; vehicles cannot enter.",
+    "verify": true
+  },
+  {
+    "destination": "Udaipur",
+    "airport": "Maharana Pratap Airport, Dabok (UDR, ~22 km east of the city)",
+    "railway": "Udaipur City Railway Station (UDZ), Rana Pratap Nagar (RPZ)",
+    "localTransit": "Auto-rickshaws, pre-paid tourist cabs, e-rickshaws, and foot travel around Lake Pichola and the Old City",
+    "intercityBus": "Udaipur Central Bus Depot (RSRTC buses to Jaipur, Ahmedabad, Jodhpur, and Mount Abu)",
+    "notes": "Streets around Old City and Jagdish Temple are narrow; auto-rickshaws or walking are preferable to large cabs.",
+    "verify": true
+  },
+  {
+    "destination": "Leh",
+    "airport": "Kushok Bakula Rimpochee Airport, Leh (IXL) - one of the highest commercial airports in the world",
+    "railway": "No direct railway; nearest railheads are Jammu Tawi (JAT, ~700 km) and Chandigarh (~670 km)",
+    "localTransit": "Ladakh Taxi Union pre-paid registered cabs, rental Royal Enfield motorbikes, and local mini-buses",
+    "intercityBus": "HRTC and JKRTC bus services via Manali-Leh Highway and Srinagar-Leh Highway (seasonal, typically June to October)",
+    "notes": "Mandatory 48-hour acclimatization rest upon flying into Leh. Inner Line Permits (ILP) required for Nubra Valley, Pangong Tso, and Tso Moriri.",
+    "verify": true
+  },
+  {
+    "destination": "Kochi",
+    "airport": "Cochin International Airport (COK), Nedumbassery (~28 km northeast of Ernakulam)",
+    "railway": "Ernakulam Junction (ERS / South) and Ernakulam Town (ERN / North)",
+    "localTransit": "Kochi Metro (Aluva to Thripunithura), Kochi Water Metro (battery-electric passenger ferries connecting islands), auto-rickshaws, and KSRTC city buses",
+    "intercityBus": "KSRTC Central Bus Station, Ernakulam (adjacent to Ernakulam South Railway Station)",
+    "notes": "The Kochi Water Metro connects Fort Kochi, Vypin, High Court, and Kakkanad with integrated single-token ticketing.",
+    "verify": true
+  },
+  {
+    "destination": "Amritsar",
+    "airport": "Sri Guru Ram Dass Jee International Airport (ATQ, ~11 km northwest of the city)",
+    "railway": "Amritsar Junction Railway Station (ASR)",
+    "localTransit": "Free Golden Temple shuttle buses from railway station, auto-rickshaws, e-rickshaws, and tourist cabs to Wagah Border",
+    "intercityBus": "Amritsar Integrated Bus Stand (PRTC and private buses to Delhi, Chandigarh, and Jammu)",
+    "notes": "Special shared cabs and coaches run daily from Amritsar to the Attari-Wagah Border Beating Retreat ceremony starting around 15:00.",
+    "verify": true
+  }
+]

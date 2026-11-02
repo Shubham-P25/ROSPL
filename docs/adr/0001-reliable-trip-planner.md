@@ -42,3 +42,7 @@ We architected a multi-layered, resilient, $0 open-source planner engine:
 ### Negative / Trade-Offs
 - Free external endpoints (Nominatim, OpenTripMap) require polite rate limits (1 req/sec) and caching to avoid rate-limiting.
 - Unseeded remote destinations outside major geographic areas receive seed fallback recommendations if live place queries return fewer than 3 venues.
+
+
+### Optional Demo Assistant Server-Side Key Fallback
+For the live cloud demo deployment, a server-side Gemini key fallback (`GEMINI_API_KEY`) is supported on `/api/assistant/chat` alongside client-side BYOK mode. The core planner and travel tools NEVER depend on this key: if missing, exhausted, or unavailable, PackGo falls back gracefully to its deterministic keyword intent router and in-repo BM25 RAG index.

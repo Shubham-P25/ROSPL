@@ -1,10 +1,12 @@
-import React, { lazy, Suspense } from "react";
+import React, { lazy, Suspense, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import ProtectedRoute from "./components/ProtectedRoute";
 import ScrollToTop from "./components/ScrollToTop";
+import AssistantFab from "./components/AssistantFab";
+import AssistantDrawer from "./components/AssistantDrawer";
 
 // Eagerly loaded for instantaneous first paint
 import HomePage from "./features/static/HomePage";
@@ -51,6 +53,21 @@ const PublicOnlyRoute = ({ children }) => {
     return <Navigate to="/my-journey" replace />;
   }
   return children;
+};
+
+// Assistant wrapper for all logged-in views
+const AssistantContainer = () => {
+  const { isAuthenticated } = useAuth();
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!isAuthenticated) return null;
+
+  return (
+    <>
+      <AssistantFab isOpen={isOpen} onClick={() => setIsOpen(true)} />
+      <AssistantDrawer isOpen={isOpen} onClose={() => setIsOpen(false)} />
+    </>
+  );
 };
 
 export function App() {
@@ -148,6 +165,7 @@ export function App() {
           </div>
           <Footer />
         </div>
+        <AssistantContainer />
       </BrowserRouter>
     </AuthProvider>
   );

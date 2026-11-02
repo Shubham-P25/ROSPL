@@ -109,6 +109,7 @@ const documentRoutes = require("./routes/documents");
 const plannerRoutes = require("./jobs/routes");
 const planRoutes = require("./routes/plans");
 const { router: healthRoutes } = require("./routes/health");
+const assistantRoutes = require("./routes/assistant");
 const { sweepStuckJobs } = require("./jobs/runner");
 
 // Use routes
@@ -126,6 +127,7 @@ app.use("/api/documents", documentRoutes);
 app.use("/api/planner", plannerRoutes);
 app.use("/api/plans", planRoutes);
 app.use("/api/health", healthRoutes);
+app.use("/api/assistant", assistantRoutes);
 
 // Base route
 app.get("/", (req, res) => {
