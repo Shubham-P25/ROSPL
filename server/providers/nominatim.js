@@ -10,7 +10,8 @@ const { recordProviderStatus } = require("../routes/health");
 
 const BASE_URL = "https://nominatim.openstreetmap.org/search";
 const USER_AGENT =
-  process.env.NOMINATIM_USER_AGENT || "ROSPL/1.0 (contact: packgo@example.com)";
+  process.env.NOMINATIM_USER_AGENT ||
+  "ROSPL-TravelPlanner/1.0 (contact: patilshubham7644@gmail.com)";
 const TIMEOUT_MS = 4000;
 const NINETY_DAYS_MS = 90 * 24 * 60 * 60 * 1000;
 

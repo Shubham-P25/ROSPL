@@ -180,8 +180,9 @@ validateJwtSecret();
 
 // Connect to MongoDB
 mongoose.set("sanitizeFilter", true);
+mongoose.set("bufferTimeoutMS", 30000);
 mongoose
-  .connect(process.env.MONGO_URI)
+  .connect(process.env.MONGO_URI, { serverSelectionTimeoutMS: 30000, socketTimeoutMS: 45000 })
   .then(() => {
     console.log("Connected to MongoDB");
     sweepStuckJobs();

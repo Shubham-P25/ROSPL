@@ -82,6 +82,7 @@ export const TripDetailPage = () => {
   const [trip, setTrip] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [coverImage, setCoverImage] = useState("");
 
   // Share & Delete state
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
@@ -109,6 +110,12 @@ export const TripDetailPage = () => {
   useEffect(() => {
     if (id) fetchTrip();
   }, [id]);
+
+  useEffect(() => {
+    if (trip) {
+      setCoverImage(getDestinationCover(trip.destination, trip.images));
+    }
+  }, [trip?.destination, trip?.images]);
 
   const handleShareClick = async () => {
     try {
@@ -181,13 +188,8 @@ export const TripDetailPage = () => {
   }
 
   const { destination, startDate, endDate, status, budget, images = [] } = trip;
-  const [coverImage, setCoverImage] = useState(() =>
-    getDestinationCover(destination, images),
-  );
-
-  useEffect(() => {
-    setCoverImage(getDestinationCover(destination, images));
-  }, [destination, images]);
+  const displayCover =
+    coverImage || getDestinationCover(destination, images);
 
   const formatDate = (d) => {
     if (!d) return "";
@@ -216,7 +218,7 @@ export const TripDetailPage = () => {
       <section className="relative w-full h-[580px] sm:h-[680px] bg-[#1C1B1B] overflow-hidden">
         {/* Dynamic Destination Image with Multi-Tier Fallback */}
         <img
-          src={coverImage}
+          src={displayCover}
           alt={destination}
           onError={() =>
             setCoverImage(

@@ -7,7 +7,73 @@ const Plan = require("../models/Plan");
 const { generatePlan } = require("../planner/index");
 const { getSeedPlaces, normalizeCityName } = require("../seed/index");
 const { withFallback } = require("../lib/withFallback");
+const { CATEGORIES } = require("../schemas/place");
 const nominatim = require("../providers/nominatim");
+
+const CATEGORY_MAP = {
+  adventure: ["adventure", "game", "climb", "sport", "trail", "trek"],
+  nature: ["nature", "beach", "coastal", "wildlife", "park", "lake", "mountain", "hill"],
+  culture: ["culture", "heritage", "palace", "fort", "historic", "monument", "museum", "sightseeing", "art"],
+  food: ["food", "street eats", "culinary", "restaurant", "cafe", "dining", "eats"],
+  shopping: ["shopping", "bazaar", "market", "mall", "souvenir", "craft"],
+  religious: ["religious", "religion", "spiritual", "temple", "church", "mosque", "ghat", "ashram"],
+  nightlife: ["nightlife", "night", "bar", "club", "pub", "leisure", "entertainment"],
+};
+
+function normalizeInterests(inputList) {
+  if (!Array.isArray(inputList) || inputList.length === 0) {
+    return ["culture", "food", "nature"];
+  }
+
+  const validCategories = new Set(CATEGORIES);
+  const matched = new Set();
+
+  for (const raw of inputList) {
+    if (typeof raw !== "string") continue;
+    const clean = raw.toLowerCase().trim();
+    if (!clean) continue;
+
+    if (validCategories.has(clean)) {
+      matched.add(clean);
+      continue;
+    }
+
+    let found = false;
+    for (const [cat, keywords] of Object.entries(CATEGORY_MAP)) {
+      if (keywords.some((kw) => clean.includes(kw) || kw.includes(clean))) {
+        matched.add(cat);
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      matched.add("other");
+    }
+  }
+
+  const result = Array.from(matched).filter((cat) => validCategories.has(cat));
+  if (result.length === 0) {
+    return ["culture", "food"];
+  }
+  return result.slice(0, 6);
+}
+
+function normalizePace(rawPace, daysPerSpot) {
+  const p = (rawPace || "").toLowerCase().trim();
+  if (p === "relaxed" || p === "packed" || p === "normal") {
+    return p;
+  }
+  if (p === "fast") return "packed";
+  if (p === "balanced") return "normal";
+
+  const d = Number(daysPerSpot) || 3;
+  if (d >= 4) return "relaxed";
+  if (d <= 2) return "packed";
+  return "normal";
+}
+
+// In-flight generation promise map to avoid concurrent duplicate runs
+const activePlanGenerations = new Map();
 const opentripmap = require("../providers/opentripmap");
 const openmeteo = require("../providers/openmeteo");
 const wikivoyage = require("../providers/wikivoyage");
@@ -140,15 +206,14 @@ async function executeTripPlanGeneration(trip, options = {}, userId) {
     options.transportType || trip.transportType || "vehicle";
   const daysPerSpot = Number(options.daysPerSpot || trip.daysPerSpot) || 3;
   const famousSpot = (options.famousSpot || trip.famousSpot || "").trim();
-  const interests =
+  const rawInterests =
     Array.isArray(options.interests) && options.interests.length > 0
       ? options.interests
       : Array.isArray(trip.interests) && trip.interests.length > 0
         ? trip.interests
-        : ["heritage", "culture", "food", "sightseeing"];
-
-  const pace =
-    daysPerSpot >= 4 ? "relaxed" : daysPerSpot <= 2 ? "fast" : "balanced";
+        : ["culture", "food", "nature"];
+  const interests = normalizeInterests(rawInterests);
+  const pace = normalizePace(options.pace || trip.pace, daysPerSpot);
 
   // 1. Geocode Destination
   let coords = null;
@@ -231,16 +296,21 @@ async function executeTripPlanGeneration(trip, options = {}, userId) {
   }
 
   // 4. Generate Pure Planner Plan
+  let safeStartDateStr = undefined;
+  if (startDate instanceof Date && !isNaN(startDate.getTime())) {
+    safeStartDateStr = startDate.toISOString().split("T")[0];
+  }
+
   const planSnapshot = generatePlan(
     {
-      destination,
+      destination: (destination || "Destination").trim().slice(0, 100),
       days: diffDays,
-      budget,
+      budget: Math.max(100, Math.min(100000000, Number(budget) || 25000)),
       currency: "INR",
       pace,
       interests,
-      travellers: numberOfPeople,
-      startDate: startDate.toISOString().split("T")[0],
+      travellers: Math.max(1, Math.min(20, Math.round(numberOfPeople))),
+      startDate: safeStartDateStr,
     },
     places,
     weather,
@@ -445,24 +515,42 @@ async function executeTripPlanGeneration(trip, options = {}, userId) {
         packed: false,
       }));
 
-      let packingDoc = await PackingList.findOne({ trip: trip._id });
-      if (packingDoc) {
-        packingDoc.items = itemsToAdd;
-        await packingDoc.save();
-      } else {
-        await PackingList.create({
-          trip: trip._id,
-          user: userId || trip.user,
-          items: itemsToAdd,
-        });
-      }
+      await PackingList.findOneAndUpdate(
+        { trip: trip._id },
+        {
+          $set: {
+            user: userId || trip.user,
+            items: itemsToAdd,
+          },
+        },
+        { upsert: true, new: true, setDefaultsOnInsert: true },
+      );
     } catch (_e) {
       console.warn("Could not save packing list:", _e.message);
     }
   }
 
-  await trip.save();
-  return trip;
+  const updatedTrip = await Trip.findByIdAndUpdate(
+    trip._id,
+    {
+      $set: {
+        activities,
+        budget,
+        numberOfPeople,
+        transportType,
+        daysPerSpot,
+        famousSpot,
+        interests: trip.interests && trip.interests.length > 0 ? trip.interests : interests,
+        planData: planSnapshot,
+        images: trip.images && trip.images.length > 0 ? trip.images : await resolveDestinationImages(destination),
+        description: trip.description,
+        planId: trip.planId,
+      },
+    },
+    { new: true },
+  );
+
+  return updatedTrip || trip;
 }
 
 // Create new trip
@@ -541,10 +629,17 @@ exports.createTrip = async (req, res) => {
     });
 
     let trip = await newTrip.save();
+    const tripIdStr = trip._id.toString();
 
     // Automatically generate full recommendation plan across all 9 sections
     try {
-      trip = await executeTripPlanGeneration(trip, req.body, req.user.id);
+      const genPromise = executeTripPlanGeneration(trip, req.body, req.user.id);
+      activePlanGenerations.set(tripIdStr, genPromise);
+      try {
+        trip = await genPromise;
+      } finally {
+        activePlanGenerations.delete(tripIdStr);
+      }
     } catch (genErr) {
       console.warn("Auto-plan generation on createTrip:", genErr.message);
     }
@@ -601,10 +696,22 @@ exports.getTrip = async (req, res) => {
 
     // Auto-generate plan if trip doesn't have planData or activities yet
     if (!trip.planData || !trip.activities || trip.activities.length === 0) {
+      const tripIdStr = trip._id.toString();
       try {
-        trip = await executeTripPlanGeneration(trip, {}, req.user.id);
+        if (activePlanGenerations.has(tripIdStr)) {
+          trip = await activePlanGenerations.get(tripIdStr);
+        } else {
+          const genPromise = executeTripPlanGeneration(trip, {}, req.user.id);
+          activePlanGenerations.set(tripIdStr, genPromise);
+          try {
+            trip = await genPromise;
+          } finally {
+            activePlanGenerations.delete(tripIdStr);
+          }
+        }
       } catch (genErr) {
         console.warn("Auto-plan generation on getTrip:", genErr.message);
+        trip = (await Trip.findOne({ _id: req.params.id, user: req.user.id })) || trip;
       }
     }
 
