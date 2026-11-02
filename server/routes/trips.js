@@ -49,4 +49,15 @@ router.post(
   tripController.generateRecommendations,
 );
 
+
+// @route   POST api/trips/:id/budget/recommend
+// @desc    Get recommended budget proposal
+// @access  Private
+router.post("/:id/budget/recommend", auth, tripController.recommendTripBudget);
+
+// @route   PUT api/trips/:id/budget/plan
+// @desc    Save trip budget plan
+// @access  Private
+router.put("/:id/budget/plan", auth, tripController.saveTripBudgetPlan);
+
 module.exports = router;

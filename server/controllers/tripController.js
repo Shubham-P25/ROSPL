@@ -7,6 +7,7 @@ const Plan = require("../models/Plan");
 const { generatePlan } = require("../planner/index");
 const { getSeedPlaces, normalizeCityName } = require("../seed/index");
 const { withFallback } = require("../lib/withFallback");
+const { recommendBudget } = require("../planner/budgetPlan");
 const { CATEGORIES } = require("../schemas/place");
 const nominatim = require("../providers/nominatim");
 
@@ -911,5 +912,162 @@ exports.generateRecommendations = async (req, res) => {
     return res.status(500).json({
       message: err.message || "Failed to generate recommendation plan.",
     });
+  }
+};
+
+
+async function tryRefineBudgetWithAI(ruleProposal, trip) {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) return ruleProposal;
+
+  const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+  const prompt = `You are a travel budget specialist for travel in India.
+Trip details:
+- Destination: ${trip.destination}
+- Duration: ${ruleProposal.days} days
+- Group: ${ruleProposal.people} travelers
+- Total Budget: ₹${ruleProposal.total}
+- Starting city: ${trip.startingLocation || "Not specified"}
+- Transport mode: ${trip.transportType || "vehicle"}
+
+Proposed category amounts (must sum to exactly ${ruleProposal.total}):
+${JSON.stringify(ruleProposal.categories, null, 2)}
+
+Provide a 2-sentence explanation of this budget allocation. You may optionally adjust category numbers slightly (rounded to ₹50) if beneficial, BUT the sum of {stay, transport, food, activities, shopping, buffer} MUST EXACTLY EQUAL ${ruleProposal.total}.
+Respond ONLY with a JSON object:
+{
+  "explanation": "2 sentence explanation",
+  "categories": { "stay": number, "transport": number, "food": number, "activities": number, "shopping": number, "buffer": number }
+}`;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 4000);
+
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature: 0.3, responseMimeType: "application/json" },
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+
+    if (!res.ok) return ruleProposal;
+
+    const data = await res.json();
+    const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (!rawText) return ruleProposal;
+
+    const parsed = JSON.parse(rawText);
+    if (!parsed?.categories) return ruleProposal;
+
+    const cats = parsed.categories;
+    const sum = Number(cats.stay || 0) + Number(cats.transport || 0) + Number(cats.food || 0) + Number(cats.activities || 0) + Number(cats.shopping || 0) + Number(cats.buffer || 0);
+
+    if (sum === ruleProposal.total && Object.values(cats).every((v) => typeof v === "number" && v >= 0)) {
+      return {
+        ...ruleProposal,
+        categories: cats,
+        notes: [
+          ...(parsed.explanation ? [parsed.explanation] : []),
+          ...ruleProposal.notes,
+        ],
+        source: "ai_refined",
+      };
+    }
+  } catch (_err) {
+    // Graceful fallback to deterministic
+  }
+
+  return ruleProposal;
+}
+
+exports.recommendTripBudget = async (req, res) => {
+  try {
+    const trip = await Trip.findOne({ _id: req.params.id, user: req.user.id });
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    let diffDays = 3;
+    if (trip.startDate && trip.endDate) {
+      const ms = new Date(trip.endDate) - new Date(trip.startDate);
+      diffDays = Math.max(1, Math.round(ms / (1000 * 60 * 60 * 24)) + 1);
+    }
+
+    const total = req.body.total !== undefined ? Number(req.body.total) : (Number(trip.budget) || 10000);
+    const people = req.body.people !== undefined ? Number(req.body.people) : (Number(trip.numberOfPeople) || 1);
+    const days = req.body.days !== undefined ? Number(req.body.days) : diffDays;
+
+    let proposal = recommendBudget({
+      total,
+      days,
+      people,
+      transportType: trip.transportType,
+      startingLocation: trip.startingLocation,
+      destination: trip.destination,
+      places: trip.planData?.places ? Object.values(trip.planData.places) : trip.activities,
+      tags: trip.interests,
+    });
+
+    proposal = await tryRefineBudgetWithAI(proposal, trip);
+
+    return res.json({
+      success: true,
+      data: proposal,
+    });
+  } catch (err) {
+    console.error("Recommend budget error:", err);
+    return res.status(500).json({ message: "Failed to generate budget recommendation." });
+  }
+};
+
+exports.saveTripBudgetPlan = async (req, res) => {
+  try {
+    const trip = await Trip.findOne({ _id: req.params.id, user: req.user.id });
+    if (!trip) {
+      return res.status(404).json({ message: "Trip not found" });
+    }
+
+    const { categories, source, notes } = req.body;
+    if (!categories || typeof categories !== "object") {
+      return res.status(400).json({ message: "Categories object is required." });
+    }
+
+    const validCats = ["stay", "transport", "food", "activities", "shopping", "buffer"];
+    const sanitizedCategories = {};
+    let total = 0;
+
+    for (const cat of validCats) {
+      const val = Math.max(0, Math.round(Number(categories[cat]) || 0));
+      sanitizedCategories[cat] = val;
+      total += val;
+    }
+
+    trip.budgetPlan = {
+      categories: sanitizedCategories,
+      source: source || "user",
+      generatedAt: new Date(),
+      notes: Array.isArray(notes) ? notes : [],
+    };
+
+    if (req.body.updateTripBudget || !trip.budget) {
+      trip.budget = total;
+    }
+
+    await trip.save();
+
+    return res.json({
+      success: true,
+      data: trip.budgetPlan,
+      budget: trip.budget,
+      message: "Budget plan saved successfully.",
+    });
+  } catch (err) {
+    console.error("Save budget plan error:", err);
+    return res.status(500).json({ message: "Failed to save budget plan." });
   }
 };

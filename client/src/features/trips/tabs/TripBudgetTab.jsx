@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { expensesApi } from "../../../services/api/expensesApi";
+import { tripsApi } from "../../../services/api/tripsApi";
 import { getErrorMessage } from "../../../services/api/client";
 import Button from "../../../components/Button";
 import FormField from "../../../components/FormField";
@@ -16,9 +17,24 @@ import {
   AlertCircle,
   TrendingUp,
   Users,
+  Sparkles,
+  Sliders,
+  Check,
+  RotateCcw,
+  ShieldAlert,
+  HelpCircle,
 } from "lucide-react";
 
-export const TripBudgetTab = ({ trip }) => {
+const CATEGORY_KEYS = [
+  { key: "stay", label: "Accommodation & Stay", expCat: "Accommodation", color: "#6C2F00" },
+  { key: "transport", label: "Transit & Travel", expCat: "Transportation", color: "#8C4A1F" },
+  { key: "food", label: "Dining & Food", expCat: "Food", color: "#B3622A" },
+  { key: "activities", label: "Activities & Sightseeing", expCat: "Activities", color: "#3B6939" },
+  { key: "shopping", label: "Shopping & Souvenirs", expCat: "Shopping", color: "#7B553C" },
+  { key: "buffer", label: "Emergency Buffer", expCat: "Other", color: "#54433A" },
+];
+
+export const TripBudgetTab = ({ trip, onTripUpdate }) => {
   const [expenses, setExpenses] = useState([]);
   const [summary, setSummary] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +42,22 @@ export const TripBudgetTab = ({ trip }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  // Budget Recommendation State
+  const [budgetPlan, setBudgetPlan] = useState(trip?.budgetPlan || null);
+  const [isRecommendOpen, setIsRecommendOpen] = useState(false);
+  const [recommending, setRecommending] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [planCategories, setPlanCategories] = useState({
+    stay: 0,
+    transport: 0,
+    food: 0,
+    activities: 0,
+    shopping: 0,
+    buffer: 0,
+  });
+  const [planNotes, setPlanNotes] = useState([]);
+  const [targetTotal, setTargetTotal] = useState(Number(trip?.budget) || 12000);
 
   const numberOfPeople = Math.max(1, Number(trip?.numberOfPeople) || 1);
 
@@ -67,8 +99,85 @@ export const TripBudgetTab = ({ trip }) => {
   };
 
   useEffect(() => {
-    if (trip._id) fetchExpensesData();
-  }, [trip._id]);
+    if (trip._id) {
+      fetchExpensesData();
+      if (trip.budgetPlan?.categories) {
+        setBudgetPlan(trip.budgetPlan);
+        setPlanCategories({ ...trip.budgetPlan.categories });
+        setPlanNotes(trip.budgetPlan.notes || []);
+      }
+      if (trip.budget) {
+        setTargetTotal(Number(trip.budget));
+      }
+    }
+  }, [trip._id, trip.budgetPlan, trip.budget]);
+
+  const handleFetchRecommendation = async (overrideTotal) => {
+    setRecommending(true);
+    try {
+      const budgetAmount = overrideTotal !== undefined ? overrideTotal : (targetTotal || trip.budget || 12000);
+      const res = await tripsApi.recommendBudget(trip._id, {
+        total: budgetAmount,
+        people: numberOfPeople,
+      });
+
+      if (res.data?.data) {
+        const prop = res.data.data;
+        setPlanCategories(prop.categories);
+        setPlanNotes(prop.notes || []);
+        setTargetTotal(prop.total);
+        setIsRecommendOpen(true);
+      }
+    } catch (err) {
+      console.error("Failed to recommend budget:", err);
+    } finally {
+      setRecommending(false);
+    }
+  };
+
+  const handleSliderChange = (changedKey, newVal) => {
+    const val = Math.max(0, Math.round(Number(newVal) / 50) * 50);
+    const updated = { ...planCategories, [changedKey]: val };
+
+    if (changedKey === "buffer") {
+      setPlanCategories(updated);
+      return;
+    }
+
+    // Keep total fixed by absorbing in buffer
+    const nonBufferSum = CATEGORY_KEYS
+      .filter((c) => c.key !== "buffer")
+      .reduce((sum, c) => sum + (c.key === changedKey ? val : (updated[c.key] || 0)), 0);
+
+    const remainder = targetTotal - nonBufferSum;
+    updated.buffer = Math.max(0, remainder);
+
+    setPlanCategories(updated);
+  };
+
+  const handleApplyBudgetPlan = async () => {
+    setSavingPlan(true);
+    try {
+      const res = await tripsApi.saveBudgetPlan(trip._id, {
+        categories: planCategories,
+        source: "customized",
+        notes: planNotes,
+        updateTripBudget: true,
+      });
+
+      if (res.data?.data) {
+        setBudgetPlan(res.data.data);
+        setIsRecommendOpen(false);
+        if (onTripUpdate) {
+          onTripUpdate({ ...trip, budgetPlan: res.data.data, budget: res.data.budget });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to save budget plan:", err);
+    } finally {
+      setSavingPlan(false);
+    }
+  };
 
   const handleAddExpense = async (e) => {
     e.preventDefault();
@@ -122,7 +231,7 @@ export const TripBudgetTab = ({ trip }) => {
     (sum, item) => sum + (Number(item.amount) || 0),
     0,
   );
-  const plannedBudget = Number(trip.budget) || 0;
+  const plannedBudget = Number(trip.budget) || targetTotal || 0;
   const budgetRemaining = plannedBudget - totalSpent;
   const percentUsed =
     plannedBudget > 0
@@ -133,6 +242,34 @@ export const TripBudgetTab = ({ trip }) => {
   const perPersonBudget = Math.round(plannedBudget / numberOfPeople);
   const perPersonSpent = Math.round(totalSpent / numberOfPeople);
   const perPersonRemaining = Math.round(budgetRemaining / numberOfPeople);
+
+  // Spent amounts grouped by standard category key
+  const spentByCatKey = {
+    stay: 0,
+    transport: 0,
+    food: 0,
+    activities: 0,
+    shopping: 0,
+    buffer: 0,
+  };
+
+  for (const exp of expenses) {
+    const amt = Number(exp.amount) || 0;
+    const cat = (exp.category || "").toLowerCase();
+    if (cat.includes("accom") || cat.includes("hotel") || cat.includes("stay")) {
+      spentByCatKey.stay += amt;
+    } else if (cat.includes("trans") || cat.includes("travel") || cat.includes("flight") || cat.includes("train")) {
+      spentByCatKey.transport += amt;
+    } else if (cat.includes("food") || cat.includes("dining") || cat.includes("restaurant") || cat.includes("eat")) {
+      spentByCatKey.food += amt;
+    } else if (cat.includes("activ") || cat.includes("sight") || cat.includes("tour")) {
+      spentByCatKey.activities += amt;
+    } else if (cat.includes("shop") || cat.includes("souvenir")) {
+      spentByCatKey.shopping += amt;
+    } else {
+      spentByCatKey.buffer += amt;
+    }
+  }
 
   return (
     <div className="space-y-10">
@@ -151,15 +288,117 @@ export const TripBudgetTab = ({ trip }) => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => handleFetchRecommendation()}
+            disabled={recommending}
+          >
+            <Sparkles className="w-4 h-4 mr-1.5 text-[#6C2F00]" />
+            {recommending ? "Calculating..." : "Recommend Budget"}
+          </Button>
           <span className="text-xs font-semibold px-3 py-1 bg-[#6C2F00] text-white rounded-full">
             {numberOfPeople} {numberOfPeople === 1 ? "Person" : "People"}
           </span>
-          <span className="text-xs text-[#877369]">
-            Individual Share: ~₹{perPersonSpent.toLocaleString("en-IN")} spent
-          </span>
         </div>
       </div>
+
+      {/* Interactive Budget Recommendation Panel */}
+      {isRecommendOpen && (
+        <div className="bg-[#FFFFFF] border-2 border-[#6C2F00]/20 rounded-lg p-6 sm:p-8 shadow-sm space-y-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E2E1]">
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="p-1.5 bg-[#6C2F00]/10 rounded text-[#6C2F00]">
+                  <Sliders className="w-4 h-4" />
+                </span>
+                <h3 className="font-serif text-xl font-bold text-[#1C1B1B]">
+                  Tailored Budget Allocation
+                </h3>
+              </div>
+              <p className="text-xs text-[#54433A] mt-1">
+                Deterministic rule-based distribution for {trip.destination} with zero remainder guarantee.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-[#877369]">Total Target:</span>
+              <span className="font-serif text-lg font-bold text-[#6C2F00]">
+                ₹{targetTotal.toLocaleString("en-IN")}
+              </span>
+            </div>
+          </div>
+
+          {planNotes.length > 0 && (
+            <div className="bg-[#FAF8F7] p-3 rounded border border-[#E5E2E1] flex items-start gap-2 text-xs text-[#54433A]">
+              <HelpCircle className="w-4 h-4 text-[#6C2F00] shrink-0 mt-0.5" />
+              <div>
+                <span className="font-semibold text-[#1C1B1B]">Planner Notes: </span>
+                {planNotes.join(" ")}
+              </div>
+            </div>
+          )}
+
+          <div className="space-y-4">
+            {CATEGORY_KEYS.map(({ key, label }) => {
+              const amount = planCategories[key] || 0;
+              const perPerson = Math.round(amount / numberOfPeople);
+              const sharePct = targetTotal > 0 ? Math.round((amount / targetTotal) * 100) : 0;
+
+              return (
+                <div key={key} className="space-y-1.5 p-3 rounded bg-[#FAF8F7] border border-[#E5E2E1]">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-semibold text-[#1C1B1B]">{label}</span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-[11px] text-[#877369]">
+                        ~₹{perPerson.toLocaleString("en-IN")} / person ({sharePct}%)
+                      </span>
+                      <span className="font-serif font-bold text-sm text-[#1C1B1B]">
+                        ₹{amount.toLocaleString("en-IN")}
+                      </span>
+                    </div>
+                  </div>
+                  <input
+                    type="range"
+                    min="0"
+                    max={targetTotal}
+                    step="50"
+                    value={amount}
+                    onChange={(e) => handleSliderChange(key, e.target.value)}
+                    className="w-full h-1.5 bg-[#E5E2E1] rounded-lg appearance-none cursor-pointer accent-[#6C2F00]"
+                  />
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-4 border-t border-[#E5E2E1]">
+            <div className="text-xs text-[#54433A]">
+              Sliders adjust buffer automatically so category sum always matches the target budget exactly.
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsRecommendOpen(false)}
+                className="flex-1 sm:flex-none"
+              >
+                Dismiss
+              </Button>
+              <Button
+                variant="terracotta"
+                size="sm"
+                onClick={handleApplyBudgetPlan}
+                disabled={savingPlan}
+                className="flex-1 sm:flex-none"
+              >
+                <Check className="w-4 h-4 mr-1.5" />
+                {savingPlan ? "Applying..." : "Apply Budget Plan"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Budget Summary Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
@@ -231,7 +470,93 @@ export const TripBudgetTab = ({ trip }) => {
         </div>
       </div>
 
-      {/* Category Breakdown */}
+      {/* Category Spent vs Allocated (with 90% warning) */}
+      {budgetPlan?.categories && (
+        <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#E5E2E1] rounded shadow-xs space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E5E2E1]">
+            <div>
+              <h4 className="font-serif text-xl font-bold text-[#1C1B1B] flex items-center">
+                <PieChart className="w-5 h-5 mr-2 text-[#6C2F00]" />
+                Category Budget Tracking (Spent vs Allocated)
+              </h4>
+              <p className="text-xs text-[#54433A] mt-0.5">
+                Target quotas per category based on active budget plan.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="xs"
+              onClick={() => setIsRecommendOpen(true)}
+            >
+              Adjust Plan
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {CATEGORY_KEYS.map(({ key, label }) => {
+              const allocated = Number(budgetPlan.categories?.[key]) || 0;
+              const spent = spentByCatKey[key] || 0;
+              const pct = allocated > 0 ? Math.round((spent / allocated) * 100) : (spent > 0 ? 100 : 0);
+              const isOver90 = allocated > 0 && spent >= 0.9 * allocated;
+              const isExceeded = spent > allocated;
+
+              return (
+                <div
+                  key={key}
+                  className={`p-4 rounded border transition-colors ${
+                    isExceeded
+                      ? "bg-[#FFF5F5] border-[#FFDAD6]"
+                      : isOver90
+                      ? "bg-[#FFF9F2] border-[#F2C299]"
+                      : "bg-[#FAF8F7] border-[#E5E2E1]"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-[#1C1B1B]">{label}</span>
+                    {isExceeded ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#FFDAD6] text-[#BA1A1A] flex items-center gap-1">
+                        <AlertCircle className="w-3 h-3" /> Exceeded
+                      </span>
+                    ) : isOver90 ? (
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-[#FFF2DE] text-[#8C4A1F] flex items-center gap-1">
+                        <ShieldAlert className="w-3 h-3" /> &gt;90% used
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-[#877369]">
+                        {pct}%
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-baseline justify-between text-xs mb-1.5">
+                    <span className="font-serif font-bold text-sm text-[#1C1B1B]">
+                      ₹{spent.toLocaleString("en-IN")}
+                    </span>
+                    <span className="text-[#877369] text-[11px]">
+                      of ₹{allocated.toLocaleString("en-IN")}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-[#E5E2E1] h-1.5 rounded-full overflow-hidden">
+                    <div
+                      className={`h-full ${
+                        isExceeded
+                          ? "bg-[#BA1A1A]"
+                          : isOver90
+                          ? "bg-[#D97706]"
+                          : "bg-[#6C2F00]"
+                      }`}
+                      style={{ width: `${Math.min(100, pct)}%` }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Category Breakdown (Logged Expenses) */}
       {summary.length > 0 && (
         <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#E5E2E1] rounded shadow-xs space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
@@ -381,102 +706,80 @@ export const TripBudgetTab = ({ trip }) => {
             </div>
           )}
 
-          <form onSubmit={handleAddExpense} className="space-y-5">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FormField
-                label="Amount"
-                name="amount"
-                type="number"
-                step="0.01"
-                min="0.01"
-                value={formData.amount}
+          <form onSubmit={handleAddExpense} className="space-y-4">
+            <FormField label="Category" required>
+              <select
+                value={formData.category}
                 onChange={(e) =>
-                  setFormData({ ...formData, amount: e.target.value })
+                  setFormData({ ...formData, category: e.target.value })
                 }
-                placeholder="e.g. 1500"
-                required
-              />
+                className="w-full px-3 py-2 bg-[#F6F3F2] border border-[#E5E2E1] rounded text-xs focus:outline-none focus:border-[#6C2F00]"
+              >
+                {categories.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </FormField>
 
-              <div className="flex flex-col">
-                <label className="block text-xs font-semibold uppercase tracking-[0.1em] text-[#54433A] mb-1.5">
-                  Currency
-                </label>
-                <select
-                  value={formData.currency}
+            <div className="grid grid-cols-2 gap-4">
+              <FormField label="Amount (INR)" required>
+                <input
+                  type="number"
+                  min="1"
+                  step="any"
+                  placeholder="e.g. 1500"
+                  value={formData.amount}
                   onChange={(e) =>
-                    setFormData({ ...formData, currency: e.target.value })
+                    setFormData({ ...formData, amount: e.target.value })
                   }
-                  className="py-2.5 px-2 bg-transparent border-b border-[#DAC2B6] text-xs font-semibold uppercase text-[#1C1B1B] focus:outline-none focus:border-[#6C2F00]"
-                >
-                  <option value="INR">INR (₹)</option>
-                  <option value="USD">USD ($)</option>
-                  <option value="EUR">EUR (€)</option>
-                  <option value="GBP">GBP (£)</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col">
-                <label className="block text-xs font-semibold uppercase tracking-[0.1em] text-[#54433A] mb-1.5">
-                  Category *
-                </label>
-                <select
-                  value={formData.category}
-                  onChange={(e) =>
-                    setFormData({ ...formData, category: e.target.value })
-                  }
-                  className="py-2.5 px-2 bg-transparent border-b border-[#DAC2B6] text-xs font-semibold text-[#1C1B1B] focus:outline-none focus:border-[#6C2F00]"
+                  className="w-full px-3 py-2 bg-[#F6F3F2] border border-[#E5E2E1] rounded text-xs focus:outline-none focus:border-[#6C2F00]"
                   required
-                >
-                  {categories.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                />
+              </FormField>
 
-              <FormField
-                label="Date of Expense"
-                name="date"
-                type="date"
-                min={trip.startDate ? trip.startDate.split("T")[0] : undefined}
-                max={trip.endDate ? trip.endDate.split("T")[0] : undefined}
-                value={formData.date}
-                onChange={(e) =>
-                  setFormData({ ...formData, date: e.target.value })
-                }
-                helperText="Must be between trip departure and return dates"
-                required
-              />
+              <FormField label="Date" required>
+                <input
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) =>
+                    setFormData({ ...formData, date: e.target.value })
+                  }
+                  className="w-full px-3 py-2 bg-[#F6F3F2] border border-[#E5E2E1] rounded text-xs focus:outline-none focus:border-[#6C2F00]"
+                  required
+                />
+              </FormField>
             </div>
 
-            <FormField
-              label="Description / Purpose"
-              name="description"
-              value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
-              }
-              placeholder="e.g. Traditional Rajasthani dinner at Ambrai"
-            />
+            <FormField label="Description">
+              <input
+                type="text"
+                placeholder="e.g. Traditional thali lunch for group"
+                value={formData.description}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
+                className="w-full px-3 py-2 bg-[#F6F3F2] border border-[#E5E2E1] rounded text-xs focus:outline-none focus:border-[#6C2F00]"
+              />
+            </FormField>
 
-            <div className="pt-4 border-t border-[#E5E2E1] flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 pt-4 border-t border-[#E5E2E1]">
               <Button
                 variant="outline"
-                size="md"
+                size="sm"
                 onClick={() => setIsAddModalOpen(false)}
+                type="button"
               >
                 Cancel
               </Button>
               <Button
-                type="submit"
                 variant="terracotta"
-                size="md"
-                loading={formLoading}
+                size="sm"
+                type="submit"
+                disabled={formLoading}
               >
-                Save Expense
+                {formLoading ? "Recording..." : "Save Expense"}
               </Button>
             </div>
           </form>

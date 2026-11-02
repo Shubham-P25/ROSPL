@@ -12,4 +12,8 @@ export const tripsApi = {
   getSharedTrip: (token) => apiClient.get(`/trips/share/${token}`),
   generateRecommendations: (id, data = {}) =>
     apiClient.post(`/trips/${id}/generate-recommendations`, data),
+  recommendBudget: (id, data = {}) =>
+    apiClient.post(`/trips/${id}/budget/recommend`, data),
+  saveBudgetPlan: (id, data = {}) =>
+    apiClient.put(`/trips/${id}/budget/plan`, data),
 };

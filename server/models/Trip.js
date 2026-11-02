@@ -101,6 +101,25 @@ const TripSchema = new mongoose.Schema({
   planData: {
     type: mongoose.Schema.Types.Mixed,
   },
+  budgetPlan: {
+    categories: {
+      stay: { type: Number, default: 0 },
+      transport: { type: Number, default: 0 },
+      food: { type: Number, default: 0 },
+      activities: { type: Number, default: 0 },
+      shopping: { type: Number, default: 0 },
+      buffer: { type: Number, default: 0 },
+    },
+    source: {
+      type: String,
+      default: "deterministic",
+    },
+    generatedAt: {
+      type: Date,
+      default: Date.now,
+    },
+    notes: [{ type: String }],
+  },
   createdAt: {
     type: Date,
     default: Date.now,
