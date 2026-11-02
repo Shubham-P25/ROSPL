@@ -127,3 +127,40 @@ h5,
 h6 {
   font-family: "Playfair Display", Georgia, serif;
 }
+
+
+/* UI Polish: Smooth transitions, subtle paper texture, and accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, ::before, ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+.paper-grain {
+  background-color: #fcf9f8;
+  background-image: radial-gradient(#dac2b6 0.5px, transparent 0.5px);
+  background-size: 24px 24px;
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    #f0eded 0%,
+    #f6f3f2 50%,
+    #f0eded 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}

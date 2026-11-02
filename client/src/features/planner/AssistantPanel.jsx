@@ -204,7 +204,7 @@ export default function AssistantPanel({
                   type="password"
                   value={inputKey}
                   onChange={(e) => setInputKey(e.target.value)}
-                  placeholder="AIzaSy..."
+                  placeholder="Enter Gemini API key..."
                   className="flex-1 px-3 py-2 bg-slate-950 border border-indigo-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-400 font-mono"
                 />
                 <button
