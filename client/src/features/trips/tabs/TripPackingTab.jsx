@@ -6,6 +6,7 @@ import FormField from "../../../components/FormField";
 import Badge from "../../../components/Badge";
 import LoadingState from "../../../components/LoadingState";
 import EmptyState from "../../../components/EmptyState";
+import { playTick, playPop } from "../../../lib/sound";
 import {
   CheckSquare,
   Square,
@@ -16,123 +17,12 @@ import {
   CheckCircle2,
   Check,
   Compass,
+  RotateCcw,
+  Undo2,
+  Info,
+  HelpCircle,
+  X,
 } from "lucide-react";
-
-const getDestinationRecommendations = (destination = "") => {
-  const destLower = destination.toLowerCase();
-
-  if (
-    destLower.includes("kerala") ||
-    destLower.includes("kochi") ||
-    destLower.includes("alleppey") ||
-    destLower.includes("munnar") ||
-    destLower.includes("goa") ||
-    destLower.includes("mumbai")
-  ) {
-    return {
-      title: "Coastal & Tropical Essentials",
-      description: "Lightweight, breathable fabrics, rain protection, and coastal gear recommended for tropical moisture and backwaters.",
-      clothing: [
-        { name: "Breathable Linen & Cotton Shirts", category: "Clothing" },
-        { name: "Lightweight Cotton Shorts / Flowy Dresses", category: "Clothing" },
-        { name: "Quick-dry Swimwear / Boardshorts", category: "Clothing" },
-        { name: "Waterproof Sandals or Flip Flops", category: "Clothing" },
-        { name: "Lightweight Rain Poncho or Windcheater", category: "Clothing" },
-        { name: "UV Protective Wide-Brim Sun Hat", category: "Clothing" },
-      ],
-      gear: [
-        { name: "DEET Mosquito & Bug Repellent Cream", category: "Toiletries" },
-        { name: "Broad Spectrum Sunscreen (SPF 50+)", category: "Toiletries" },
-        { name: "Waterproof Mobile Pouch", category: "Electronics" },
-        { name: "Polarized UV Sunglasses", category: "Other" },
-        { name: "Compact Windproof Umbrella", category: "Other" },
-        { name: "Fast-Drying Microfiber Towel", category: "Other" },
-      ],
-    };
-  }
-
-  if (
-    destLower.includes("manali") ||
-    destLower.includes("shimla") ||
-    destLower.includes("ladakh") ||
-    destLower.includes("kashmir") ||
-    destLower.includes("leh") ||
-    destLower.includes("rishikesh") ||
-    destLower.includes("dharamshala")
-  ) {
-    return {
-      title: "Mountain & Hill Station Gear",
-      description: "Layering garments, cold-climate thermal barriers, and active trail essentials.",
-      clothing: [
-        { name: "Thermal Innerwear (Top & Bottom)", category: "Clothing" },
-        { name: "Fleece Mid-Layer Jacket", category: "Clothing" },
-        { name: "Windproof & Waterproof Heavy Jacket", category: "Clothing" },
-        { name: "Woolen Socks & Thermal Beanie Cap", category: "Clothing" },
-        { name: "Water-Resistant Trekking Shoes with Grip", category: "Clothing" },
-        { name: "Touchscreen-compatible Warm Gloves", category: "Clothing" },
-      ],
-      gear: [
-        { name: "Cold Cream & Nourishing Moisturizer", category: "Toiletries" },
-        { name: "High Altitude Sunscreen & SPF Lip Balm", category: "Toiletries" },
-        { name: "Insulated Stainless Steel Thermos Flask", category: "Other" },
-        { name: "High-Capacity 20,000mAh Power Bank", category: "Electronics" },
-        { name: "Motion Sickness & Altitude Relief Tablets", category: "Medicine" },
-        { name: "Adjustable Trekking Poles", category: "Other" },
-      ],
-    };
-  }
-
-  if (
-    destLower.includes("jaipur") ||
-    destLower.includes("udaipur") ||
-    destLower.includes("rajasthan") ||
-    destLower.includes("jodhpur") ||
-    destLower.includes("jaisalmer") ||
-    destLower.includes("varanasi") ||
-    destLower.includes("agra") ||
-    destLower.includes("delhi")
-  ) {
-    return {
-      title: "Heritage & Sun-Safe Essentials",
-      description: "Modest cultural attire for temple visits, sun protection, and comfortable walking gear.",
-      clothing: [
-        { name: "Modest Breathable Cotton Kurtas / Shirts", category: "Clothing" },
-        { name: "Comfortable Walking Sneakers / Slip-ons", category: "Clothing" },
-        { name: "Lightweight Cotton Scarf or Dupatta", category: "Clothing" },
-        { name: "Relaxed Linen Pants / Chinos", category: "Clothing" },
-        { name: "Sunglasses & Foldable Sun Hat", category: "Clothing" },
-        { name: "Light Evening Shawl or Shrug", category: "Clothing" },
-      ],
-      gear: [
-        { name: "High SPF Sweat-Resistant Sunscreen", category: "Toiletries" },
-        { name: "Hydration Electrolyte Sachets (ORS)", category: "Medicine" },
-        { name: "Antibacterial Wet Wipes & Sanitizer", category: "Toiletries" },
-        { name: "Reusable Insulated Water Bottle", category: "Other" },
-        { name: "Fast Charging Portable Battery Pack", category: "Electronics" },
-        { name: "Tote Bag for Temple Footwear & Bazaars", category: "Other" },
-      ],
-    };
-  }
-
-  return {
-    title: "Curated Travel Essentials",
-    description: "Versatile clothing and daily exploration accessories popular with seasoned travelers.",
-    clothing: [
-      { name: "Comfortable All-Day Walking Shoes", category: "Clothing" },
-      { name: "Breathable Cotton T-Shirts & Tops", category: "Clothing" },
-      { name: "Light Weather Jacket / Cardigan", category: "Clothing" },
-      { name: "Stretchable Travel Pants / Denims", category: "Clothing" },
-      { name: "Comfortable Sleepwear", category: "Clothing" },
-    ],
-    gear: [
-      { name: "Universal Travel Power Adapter", category: "Electronics" },
-      { name: "10,000mAh Portable Power Bank", category: "Electronics" },
-      { name: "Mini First-Aid & Pain Relief Kit", category: "Medicine" },
-      { name: "Refillable Travel Toiletries Bottles", category: "Toiletries" },
-      { name: "Compact Daypack / Crossbody Bag", category: "Other" },
-    ],
-  };
-};
 
 export const TripPackingTab = ({ trip }) => {
   const [packingList, setPackingList] = useState(null);
@@ -143,7 +33,11 @@ export const TripPackingTab = ({ trip }) => {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState("");
-  const [addingItemName, setAddingItemName] = useState(null);
+
+  // Recommendation & Undo state
+  const [recommending, setRecommending] = useState(false);
+  const [undoToast, setUndoToast] = useState(null); // { message: string, addedIds: string[] }
+  const [activeTooltipId, setActiveTooltipId] = useState(null);
 
   const categories = [
     "Clothing",
@@ -153,8 +47,6 @@ export const TripPackingTab = ({ trip }) => {
     "Medicine",
     "Other",
   ];
-
-  const recommendations = getDestinationRecommendations(trip.destination);
 
   const fetchPackingList = async () => {
     setLoading(true);
@@ -174,6 +66,82 @@ export const TripPackingTab = ({ trip }) => {
     if (trip._id) fetchPackingList();
   }, [trip._id]);
 
+  // Smart 1-click Recommendation (ZERO confirm dialog)
+  const handleSmartRecommend = async () => {
+    setRecommending(true);
+    try {
+      const res = await packingApi.recommend(trip._id);
+      if (res.data?.list) {
+        setPackingList(res.data.list);
+        const count = res.data.addedCount || 0;
+        const addedIds = res.data.addedIds || [];
+
+        if (count > 0) {
+          playPop();
+          setUndoToast({
+            message: `Added ${count} smart recommended ${count === 1 ? "item" : "items"} for ${trip.destination}`,
+            addedIds,
+          });
+        } else {
+          setUndoToast({
+            message: "Your packing list already includes all recommended essentials for this trip!",
+            addedIds: [],
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to recommend packing list:", err);
+    } finally {
+      setRecommending(false);
+    }
+  };
+
+  // Undo newly added recommended items
+  const handleUndoRecommendation = async () => {
+    if (!undoToast?.addedIds || undoToast.addedIds.length === 0) {
+      setUndoToast(null);
+      return;
+    }
+
+    try {
+      const res = await packingApi.batchDelete(trip._id, undoToast.addedIds);
+      setPackingList(res.data);
+      setUndoToast(null);
+    } catch (err) {
+      console.error("Failed to undo recommendation:", err);
+    }
+  };
+
+  // Reset to freshly generated recommendations
+  const handleResetToRecommended = async () => {
+    setRecommending(true);
+    try {
+      const res = await packingApi.resetRecommended(trip._id);
+      if (res.data?.list) {
+        setPackingList(res.data.list);
+        setUndoToast({
+          message: `Checklist reset to fresh recommendations for ${trip.destination}`,
+          addedIds: [],
+        });
+      }
+    } catch (err) {
+      console.error("Failed to reset recommendations:", err);
+    } finally {
+      setRecommending(false);
+    }
+  };
+
+  // Remove all recommended items
+  const handleRemoveAllRecommended = async () => {
+    try {
+      const res = await packingApi.removeRecommended(trip._id);
+      setPackingList(res.data);
+      setUndoToast(null);
+    } catch (err) {
+      console.error("Failed to remove recommended items:", err);
+    }
+  };
+
   const handleAddItem = async (e) => {
     if (e) e.preventDefault();
     if (!newItemName.trim()) return;
@@ -184,6 +152,7 @@ export const TripPackingTab = ({ trip }) => {
         name: newItemName.trim(),
         category: newItemCategory,
       });
+      playPop();
       setPackingList(res.data);
       setNewItemName("");
     } catch (err) {
@@ -193,22 +162,8 @@ export const TripPackingTab = ({ trip }) => {
     }
   };
 
-  const handleAddQuickItem = async (item) => {
-    setAddingItemName(item.name);
-    try {
-      const res = await packingApi.addItem(trip._id, {
-        name: item.name,
-        category: item.category,
-      });
-      setPackingList(res.data);
-    } catch (err) {
-      console.error("Failed to add quick recommendation:", err);
-    } finally {
-      setAddingItemName(null);
-    }
-  };
-
   const handleToggle = async (itemId) => {
+    playTick();
     try {
       const res = await packingApi.toggleItem(trip._id, itemId);
       setPackingList(res.data);
@@ -265,14 +220,41 @@ export const TripPackingTab = ({ trip }) => {
     return item.category === selectedCategory;
   });
 
-  const isItemAlreadyAdded = (name) => {
-    return items.some((i) => i.name.toLowerCase() === name.toLowerCase());
-  };
+  const recommendedItemsCount = items.filter((i) => i.source === "recommended").length;
 
   return (
     <div className="space-y-8">
-      {/* Header with Progress Bar */}
-      <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#E5E2E1] rounded shadow-xs space-y-4">
+      {/* Undo Toast Notification */}
+      {undoToast && (
+        <div className="bg-[#1C1B1B] text-[#FAF8F7] p-3.5 sm:p-4 rounded-lg shadow-lg flex items-center justify-between gap-4 transition-all animate-in fade-in slide-in-from-top-2 duration-200">
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm">
+            <Sparkles className="w-4 h-4 text-[#FFDBC9] shrink-0" />
+            <span>{undoToast.message}</span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            {undoToast.addedIds && undoToast.addedIds.length > 0 && (
+              <button
+                type="button"
+                onClick={handleUndoRecommendation}
+                className="px-3 py-1 bg-[#6C2F00] hover:bg-[#8C4A1F] text-white text-xs font-semibold rounded flex items-center gap-1 transition-colors"
+              >
+                <Undo2 className="w-3.5 h-3.5" />
+                Undo
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setUndoToast(null)}
+              className="text-[#877369] hover:text-[#FAF8F7] p-1"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Header with Progress Bar and Smart Recommendation Trigger */}
+      <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#E5E2E1] rounded shadow-xs space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[#6C2F00] block mb-1">
@@ -281,15 +263,30 @@ export const TripPackingTab = ({ trip }) => {
             <h3 className="font-serif text-2xl font-bold text-[#1C1B1B]">
               Packing Checklist
             </h3>
+            <p className="text-xs text-[#54433A] mt-0.5">
+              Personalized for weather, duration, and activities in {trip.destination}.
+            </p>
           </div>
 
-          <div className="flex items-center space-x-2">
-            <span className="font-serif text-2xl font-bold text-[#6C2F00]">
-              {packedCount}/{totalCount}
-            </span>
-            <span className="text-xs text-[#877369]">
-              packed ({progressPercent}%)
-            </span>
+          <div className="flex items-center gap-4">
+            <Button
+              variant="terracotta"
+              size="sm"
+              onClick={handleSmartRecommend}
+              disabled={recommending}
+              className="shadow-sm"
+            >
+              <Sparkles className="w-4 h-4 mr-1.5" />
+              {recommending ? "Generating..." : "Recommend my packing list"}
+            </Button>
+            <div className="flex items-center space-x-2 pl-2 border-l border-[#E5E2E1]">
+              <span className="font-serif text-2xl font-bold text-[#6C2F00]">
+                {packedCount}/{totalCount}
+              </span>
+              <span className="text-xs text-[#877369]">
+                packed ({progressPercent}%)
+              </span>
+            </div>
           </div>
         </div>
 
@@ -301,12 +298,12 @@ export const TripPackingTab = ({ trip }) => {
           />
         </div>
 
-        {/* Template Loaders */}
+        {/* Action Controls & Preset Loaders */}
         <div className="pt-4 border-t border-[#F0EDED] flex flex-wrap items-center justify-between gap-3 text-xs">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-[#877369] flex items-center">
-              <Sparkles className="w-3.5 h-3.5 mr-1 text-[#6C2F00]" />
-              Load Template:
+              <Layers className="w-3.5 h-3.5 mr-1 text-[#6C2F00]" />
+              Templates:
             </span>
             <button
               type="button"
@@ -329,6 +326,28 @@ export const TripPackingTab = ({ trip }) => {
             >
               Camping
             </button>
+
+            {recommendedItemsCount > 0 && (
+              <>
+                <span className="text-[#DAC2B6] mx-1">|</span>
+                <button
+                  type="button"
+                  onClick={handleResetToRecommended}
+                  disabled={recommending}
+                  className="px-2.5 py-1 bg-[#FAF8F7] hover:bg-[#E5E2E1] text-[#54433A] font-semibold rounded transition-colors flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                  Reset to recommended
+                </button>
+                <button
+                  type="button"
+                  onClick={handleRemoveAllRecommended}
+                  className="px-2.5 py-1 bg-[#FAF8F7] hover:bg-[#FFDAD6] text-[#BA1A1A] font-semibold rounded transition-colors"
+                >
+                  Remove all recommended
+                </button>
+              </>
+            )}
           </div>
 
           {items.length > 0 && (
@@ -351,241 +370,173 @@ export const TripPackingTab = ({ trip }) => {
         <div className="flex-1 w-full">
           <input
             type="text"
+            placeholder="Add a custom item (e.g. Extra camera lens, Hiking pole)..."
             value={newItemName}
             onChange={(e) => setNewItemName(e.target.value)}
-            placeholder="Add custom packing item (e.g. Travel Adapter, Sunscreen, Linen Shirt)..."
-            className="w-full py-2 bg-transparent border-b border-[#DAC2B6] text-sm text-[#1C1B1B] placeholder-[#877369]/70 focus:outline-none focus:border-[#6C2F00]"
+            className="w-full px-3.5 py-2.5 bg-[#FAF8F7] border border-[#E5E2E1] rounded text-xs focus:outline-none focus:border-[#6C2F00]"
           />
-          {addError && (
-            <p className="text-xs text-[#BA1A1A] mt-1">{addError}</p>
-          )}
         </div>
 
-        <div className="w-full sm:w-40">
+        <div className="w-full sm:w-44">
           <select
             value={newItemCategory}
             onChange={(e) => setNewItemCategory(e.target.value)}
-            className="w-full py-2 bg-transparent border-b border-[#DAC2B6] text-xs font-semibold text-[#54433A] focus:outline-none focus:border-[#6C2F00]"
+            className="w-full px-3 py-2.5 bg-[#FAF8F7] border border-[#E5E2E1] rounded text-xs focus:outline-none focus:border-[#6C2F00]"
           >
-            {categories.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </select>
         </div>
 
         <Button
-          type="submit"
           variant="terracotta"
           size="sm"
-          loading={addLoading}
+          type="submit"
+          disabled={addLoading || !newItemName.trim()}
           className="w-full sm:w-auto shrink-0"
         >
-          <Plus className="w-4 h-4 mr-1" />
-          Add Item
+          <Plus className="w-4 h-4 mr-1.5" />
+          {addLoading ? "Adding..." : "Add Item"}
         </Button>
       </form>
 
       {/* Category Filter Pills */}
-      <div className="flex items-center space-x-1.5 overflow-x-auto pb-2">
-        {["all", ...categories].map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setSelectedCategory(cat)}
-            className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-full transition-colors whitespace-nowrap ${
-              selectedCategory === cat
-                ? "bg-[#1C1B1B] text-white"
-                : "bg-[#FFFFFF] text-[#54433A] border border-[#DAC2B6] hover:border-[#1C1B1B]"
-            }`}
-          >
-            {cat === "all" ? "All Items" : cat}
-          </button>
-        ))}
-      </div>
-
-      {/* Destination Pack Guide & Recommendations */}
-      <div className="bg-[#FAF8F7] border border-[#DAC2B6] p-6 rounded-md shadow-xs space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E5E2E1] pb-4">
-          <div>
-            <div className="flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-[#6C2F00]" />
-              <span className="text-xs font-semibold uppercase tracking-[0.1em] text-[#6C2F00]">
-                Curated Recommendations for {trip.destination}
-              </span>
-            </div>
-            <h4 className="font-serif text-lg font-bold text-[#1C1B1B] mt-0.5">
-              {recommendations.title}
-            </h4>
-            <p className="text-xs text-[#54433A] mt-0.5">
-              {recommendations.description}
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Recommended Clothes */}
-          <div className="space-y-3">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-[#877369] flex items-center gap-1.5">
-              <span>👕 Recommended Clothes & Footwear</span>
-            </h5>
-            <div className="space-y-2">
-              {recommendations.clothing.map((item, idx) => {
-                const alreadyAdded = isItemAlreadyAdded(item.name);
-                return (
-                  <div
-                    key={idx}
-                    className="p-2.5 bg-white border border-[#E5E2E1] rounded flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-[#1C1B1B] truncate">
-                        {item.name}
-                      </p>
-                      <span className="text-[10px] text-[#877369]">
-                        {item.category}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={alreadyAdded || addingItemName === item.name}
-                      onClick={() => handleAddQuickItem(item)}
-                      className={`px-2.5 py-1 text-[11px] font-semibold rounded shrink-0 transition-colors flex items-center gap-1 ${
-                        alreadyAdded
-                          ? "bg-[#EAF5EC] text-[#2E4632] cursor-default"
-                          : "bg-[#6C2F00] hover:bg-[#8D3F00] text-white cursor-pointer"
-                      }`}
-                    >
-                      {alreadyAdded ? (
-                        <>
-                          <Check className="w-3 h-3" /> Added
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3 h-3" /> Add
-                        </>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Recommended Gear & Essentials */}
-          <div className="space-y-3">
-            <h5 className="text-xs font-bold uppercase tracking-wider text-[#877369] flex items-center gap-1.5">
-              <span>🎒 Latest Items, Gear & Toiletries</span>
-            </h5>
-            <div className="space-y-2">
-              {recommendations.gear.map((item, idx) => {
-                const alreadyAdded = isItemAlreadyAdded(item.name);
-                return (
-                  <div
-                    key={idx}
-                    className="p-2.5 bg-white border border-[#E5E2E1] rounded flex items-center justify-between gap-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="text-xs font-medium text-[#1C1B1B] truncate">
-                        {item.name}
-                      </p>
-                      <span className="text-[10px] text-[#877369]">
-                        {item.category}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      disabled={alreadyAdded || addingItemName === item.name}
-                      onClick={() => handleAddQuickItem(item)}
-                      className={`px-2.5 py-1 text-[11px] font-semibold rounded shrink-0 transition-colors flex items-center gap-1 ${
-                        alreadyAdded
-                          ? "bg-[#EAF5EC] text-[#2E4632] cursor-default"
-                          : "bg-[#6C2F00] hover:bg-[#8D3F00] text-white cursor-pointer"
-                      }`}
-                    >
-                      {alreadyAdded ? (
-                        <>
-                          <Check className="w-3 h-3" /> Added
-                        </>
-                      ) : (
-                        <>
-                          <Plus className="w-3 h-3" /> Add
-                        </>
-                      )}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Items Checklist List */}
-      {loading ? (
-        <LoadingState message="Auditing checklist..." />
-      ) : filteredItems.length > 0 ? (
-        <div className="bg-[#FFFFFF] border border-[#E5E2E1] rounded divide-y divide-[#F0EDED] shadow-xs">
-          {filteredItems.map((item) => (
-            <div
-              key={item._id}
-              onClick={() => handleToggle(item._id)}
-              className={`p-4 sm:p-5 flex items-center justify-between cursor-pointer hover:bg-[#FCF9F8] transition-colors ${
-                item.packed ? "bg-[#FCF9F8]/60" : ""
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() => setSelectedCategory("all")}
+          className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+            selectedCategory === "all"
+              ? "bg-[#6C2F00] text-white"
+              : "bg-[#FFFFFF] border border-[#E5E2E1] text-[#54433A] hover:bg-[#F6F3F2]"
+          }`}
+        >
+          All Items ({items.length})
+        </button>
+        {categories.map((c) => {
+          const count = items.filter((i) => i.category === c).length;
+          return (
+            <button
+              key={c}
+              type="button"
+              onClick={() => setSelectedCategory(c)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-colors ${
+                selectedCategory === c
+                  ? "bg-[#6C2F00] text-white"
+                  : "bg-[#FFFFFF] border border-[#E5E2E1] text-[#54433A] hover:bg-[#F6F3F2]"
               }`}
             >
-              <div className="flex items-center space-x-4">
+              {c} ({count})
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Checklist Items Display */}
+      {loading ? (
+        <LoadingState message="Loading packing items..." />
+      ) : filteredItems.length > 0 ? (
+        <div className="bg-[#FFFFFF] border border-[#E5E2E1] rounded overflow-hidden shadow-xs divide-y divide-[#F0EDED]">
+          {filteredItems.map((item, idx) => (
+            <div
+              key={item._id || idx}
+              style={{ animationDelay: `${idx * 20}ms` }}
+              className={`p-4 flex items-center justify-between gap-4 transition-colors hover:bg-[#FAF8F7] ${
+                item.packed ? "bg-[#FAF8F7]/60" : ""
+              }`}
+            >
+              <div
+                className="flex items-center gap-3.5 flex-1 min-w-0 cursor-pointer select-none"
+                onClick={() => handleToggle(item._id)}
+              >
                 <button
                   type="button"
-                  className="text-[#6C2F00] focus:outline-none"
-                  aria-label={
-                    item.packed ? "Mark as unpacked" : "Mark as packed"
-                  }
+                  className="shrink-0 text-[#6C2F00] hover:text-[#8C4A1F] transition-colors"
                 >
                   {item.packed ? (
-                    <CheckSquare className="w-5 h-5 fill-[#CDEACE] text-[#2E4632]" />
+                    <CheckSquare className="w-5 h-5 text-[#6C2F00]" />
                   ) : (
-                    <Square className="w-5 h-5 text-[#DAC2B6] hover:text-[#6C2F00]" />
+                    <Square className="w-5 h-5 text-[#DAC2B6]" />
                   )}
                 </button>
-
-                <div>
-                  <span
-                    className={`text-sm font-medium transition-all ${
-                      item.packed
-                        ? "line-through text-[#877369]"
-                        : "text-[#1C1B1B]"
-                    }`}
-                  >
-                    {item.name}
-                  </span>
-                  <div className="text-[10px] text-[#877369] font-semibold uppercase tracking-wider mt-0.5">
-                    {item.category}
+                <div className="flex flex-col min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`text-xs font-medium truncate ${
+                        item.packed
+                          ? "line-through text-[#877369]"
+                          : "text-[#1C1B1B]"
+                      }`}
+                    >
+                      {item.name}
+                    </span>
+                    {item.source === "recommended" && (
+                      <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[9px] font-bold bg-[#6C2F00]/10 text-[#6C2F00]">
+                        <Sparkles className="w-2.5 h-2.5" />
+                        PackGo Pick
+                      </span>
+                    )}
                   </div>
+                  {item.reason && (
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <span className="text-[10px] text-[#877369] italic truncate">
+                        Why: {item.reason}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleDeleteItem(item._id);
-                }}
-                className="text-[#877369] hover:text-[#BA1A1A] transition-colors p-1"
-                title="Delete item"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <Badge variant="neutral" size="xs">
+                  {item.category}
+                </Badge>
+                {item.reason && (
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setActiveTooltipId(
+                          activeTooltipId === item._id ? null : item._id,
+                        )
+                      }
+                      title={item.reason}
+                      className="p-1 text-[#877369] hover:text-[#6C2F00] transition-colors"
+                    >
+                      <HelpCircle className="w-4 h-4" />
+                    </button>
+                    {activeTooltipId === item._id && (
+                      <div className="absolute right-0 top-7 z-10 w-64 p-2.5 bg-[#1C1B1B] text-[#FAF8F7] text-[11px] rounded shadow-lg">
+                        <span className="font-semibold block mb-0.5 text-[#FFDBC9]">
+                          Recommendation reason:
+                        </span>
+                        {item.reason}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleDeleteItem(item._id)}
+                  className="p-1 text-[#877369] hover:text-[#BA1A1A] transition-colors"
+                  title="Remove item"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
+              </div>
             </div>
           ))}
         </div>
       ) : (
         <EmptyState
-          icon={CheckSquare}
-          title="No Checklist Items"
-          description="Load a preset template above or add custom clothing, toiletries, and essentials."
-          actionLabel="Load Beach Template"
-          onAction={() => handleApplyTemplate("beach")}
+          icon={CheckCircle2}
+          title="No Items in this Category"
+          description="Click 'Recommend my packing list' to automatically generate a complete travel checklist."
+          actionLabel="Recommend Checklist"
+          onAction={handleSmartRecommend}
         />
       )}
     </div>

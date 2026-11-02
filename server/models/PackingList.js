@@ -16,6 +16,8 @@ const packingItemSchema = new mongoose.Schema(
       default: "Other",
     },
     packed: { type: Boolean, default: false },
+    reason: { type: String, default: "" },
+    source: { type: String, default: "manual" },
   },
   { _id: true },
 );

@@ -10,4 +10,11 @@ export const packingApi = {
   applyTemplate: (tripId, template) =>
     apiClient.post(`/packing/${tripId}/template`, { template }),
   clearAll: (tripId) => apiClient.delete(`/packing/${tripId}/items`),
+  recommend: (tripId) => apiClient.post(`/packing/${tripId}/recommend`),
+  batchDelete: (tripId, itemIds) =>
+    apiClient.post(`/packing/${tripId}/items/batch-delete`, { itemIds }),
+  removeRecommended: (tripId) =>
+    apiClient.post(`/packing/${tripId}/remove-recommended`),
+  resetRecommended: (tripId) =>
+    apiClient.post(`/packing/${tripId}/reset-recommended`),
 };
