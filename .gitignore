@@ -32,6 +32,7 @@ tmp/
 Travel-Plans-/
 testsprite_tests\tmp\config.json
 .vercel
+.qmind/
 .env*
 !.env.example
 !**/.env.example
