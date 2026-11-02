@@ -1,6 +1,7 @@
 /**
  * planner/scoring.js
  * Pure scoring function and deduplication.
+ * Ranks famous places with wikidata IDs and higher rate higher than generic temples.
  */
 const { haversineKm } = require("../lib/haversine");
 
@@ -52,7 +53,37 @@ function scorePlaces(places, interests = []) {
       const interest = want.has(p.category) ? 1 : 0.35;
       const rating = (p.rating ?? 3.5) / 5;
       const pop = p.popularity ?? 0.3;
-      const score = 0.45 * interest + 0.3 * rating + 0.25 * pop;
+
+      let score = 0.45 * interest + 0.3 * rating + 0.25 * pop;
+
+      // Bonus for OpenTripMap rate (scale 1..3) when provided
+      if (Number.isFinite(p.rate) && p.rate > 0) {
+        score += (p.rate / 3) * 0.1;
+      }
+
+      // Bonus for presence of wikidata id (internationally recognized heritage / landmark)
+      if (p.wikidata || (typeof p.id === "string" && p.id.includes(":Q"))) {
+        score += 0.15;
+      }
+
+      // Generic temple / mandir without wikidata ranking penalty
+      const nameLower = (p.name || "").toLowerCase();
+      const isGenericMandir =
+        !p.wikidata &&
+        !p.isFamousSpot &&
+        (nameLower.includes("mandir") ||
+          nameLower.includes("temple") ||
+          nameLower.includes("rameshwar") ||
+          nameLower.includes("krishna"));
+      if (isGenericMandir) {
+        score -= 0.1;
+      }
+
+      // Famous spot boost if explicitly requested
+      if (p.isFamousSpot) {
+        score += 0.3;
+      }
+
       return {
         ...p,
         score: Number(score.toFixed(4)),

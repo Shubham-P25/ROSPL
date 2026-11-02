@@ -2,10 +2,11 @@ import React, { useState, useEffect } from "react";
 import Badge from "../../../components/Badge";
 import EmptyState from "../../../components/EmptyState";
 import MapView from "../../planner/MapView";
+import PlacePhoto from "../../../components/PlacePhoto";
 import {
   Compass,
   ExternalLink,
-  Star,
+  Sparkles,
   Clock,
   MapPin,
   Navigation,
@@ -61,84 +62,76 @@ export const TripPlacesTab = ({ trip }) => {
     return cat.includes(selectedCategory);
   });
 
-  // Current day itinerary stops
-  const currentDayData = planDays.find((d) => d.day === selectedDay) || planDays[0];
-  const currentDayStops = (currentDayData?.items || []).map((item, idx) => {
-    const place = planPlaces[item.placeId] || {};
+  const currentDayPlan = planDays.find((d) => d.day === selectedDay) || planDays[0];
+
+  const currentDayStops = (currentDayPlan?.items || []).map((item, idx) => {
+    const pl = planPlaces[item.placeId] || {};
     return {
-      ...place,
+      ...pl,
       slot: item.slot,
       order: idx + 1,
-      travelTime: item.travelMinutesFromPrev,
+      travelMinutes: item.travelMinutesFromPrev || 15,
     };
   });
 
   return (
     <div className="space-y-10">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E2E1]">
+      {/* ── HEADER ── */}
+      <div className="pb-4 border-b border-[#E5E2E1] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[#6C2F00] block mb-1">
-            ROUTE MAP &amp; EXPLORATION CATALOGUE
+            EXPLORATION &amp; SIGHTSEEING
           </span>
           <h3 className="font-serif text-2xl font-bold text-[#1C1B1B]">
-            Exploration Map &amp; Sights in {trip.destination}
+            Destinations &amp; Curated Sights in {trip.destination}
           </h3>
           <p className="text-xs text-[#54433A] mt-1">
-            Toggle through each day of your expedition to view geographic stops,
-            timed itineraries, and recommended gear.
+            Verified landmarks, scenic viewpoints, and heritage points selected for your journey.
           </p>
         </div>
-      </div>
 
-      {/* ── DAY SELECTOR TOGGLE BAR ── */}
-      {planDays.length > 0 && (
-        <div className="bg-white p-4 rounded-xl border border-[#DAC2B6]/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-[#6C2F00]" />
-            <span className="text-xs font-bold uppercase tracking-wider text-[#1C1B1B]">
-              Select Itinerary Day:
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+        {planDays.length > 0 && (
+          <div className="flex items-center space-x-1.5 bg-[#F6F3F2] p-1 rounded-full border border-[#DAC2B6]/40 shrink-0">
             {planDays.map((d) => (
               <button
                 key={d.day}
                 type="button"
                 onClick={() => setSelectedDay(d.day)}
-                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   selectedDay === d.day
-                    ? "bg-[#6C2F00] text-white shadow-sm ring-2 ring-[#6C2F00]/20"
-                    : "bg-[#F6F3F2] text-[#54433A] hover:bg-[#DAC2B6]/40"
+                    ? "bg-[#6C2F00] text-white shadow-xs"
+                    : "text-[#54433A] hover:text-[#1C1B1B]"
                 }`}
               >
-                Day {d.day} ({d.items?.length || 0} stops)
+                Day {d.day}
               </button>
             ))}
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
-      {/* ── INTERACTIVE LEAFLET MAP VIEW ── */}
-      {planDays.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-[#877369]">
-            <span className="flex items-center gap-1 font-semibold text-[#6C2F00]">
-              <Navigation className="w-3.5 h-3.5" />
-              Showing Route &amp; Highlights for Day {selectedDay}
-            </span>
-            <span>Zoom &amp; drag map to view coordinates</span>
+      {/* ── INTERACTIVE ROUTE MAP VIEW ── */}
+      <section className="bg-white border border-[#E5E2E1] rounded-2xl p-5 shadow-xs space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div className="flex items-center space-x-2">
+            <Compass className="w-5 h-5 text-[#6C2F00]" />
+            <h4 className="font-serif text-lg font-bold text-[#1C1B1B]">
+              Day {selectedDay} Geographic Transit &amp; Waypoint Map
+            </h4>
           </div>
+          <span className="text-xs text-[#877369]">
+            {currentDayStops.length} Waypoints mapped for this day
+          </span>
+        </div>
 
+        <div className="rounded-xl overflow-hidden border border-[#E5E2E1] min-h-[380px]">
           <MapView
             days={planDays}
             places={planPlaces}
             selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
           />
         </div>
-      )}
+      </section>
 
       {/* ── DAY ITINERARY HIGHLIGHT CARDS ── */}
       {currentDayStops.length > 0 && (
@@ -158,9 +151,7 @@ export const TripPlacesTab = ({ trip }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {currentDayStops.map((stop, idx) => {
               const photoUrl =
-                stop.photos?.[0]?.url ||
-                stop.photoUrl ||
-                "https://images.unsplash.com/photo-1599661046227-4d1c87a5b9e1?auto=format&fit=crop&w=600&q=80";
+                stop.photos?.[0]?.url || stop.photoUrl || null;
 
               const mapUrl =
                 stop.mapUrl ||
@@ -180,19 +171,16 @@ export const TripPlacesTab = ({ trip }) => {
                   className="bg-white border border-[#E5E2E1] rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
                 >
                   <div>
-                    {/* Photo with Stop Badge */}
+                    {/* Verified Photo with Category Placeholder Fallback */}
                     <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
-                      <img
+                      <PlacePhoto
                         src={photoUrl}
                         alt={stop.name}
-                        loading="lazy"
+                        category={stop.category}
+                        credit={stop.photos?.[0]?.author || stop.photoCredit}
                         className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=600&q=80";
-                        }}
                       />
-                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5 z-10">
                         <span className="bg-[#6C2F00] text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-xs">
                           Stop #{stop.order}
                         </span>
@@ -200,10 +188,10 @@ export const TripPlacesTab = ({ trip }) => {
                           {stop.slot}
                         </span>
                       </div>
-                      {stop.rating && (
-                        <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span>{stop.rating.toFixed(1)}</span>
+                      {(stop.rate >= 3 || stop.popularity >= 0.8) && (
+                        <div className="absolute top-2.5 right-2.5 bg-amber-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs z-10">
+                          <Sparkles className="w-3 h-3" />
+                          <span>Popular</span>
                         </div>
                       )}
                     </div>
@@ -219,55 +207,55 @@ export const TripPlacesTab = ({ trip }) => {
                         </p>
                       </div>
 
-                      {/* Info & Budget Metrics */}
-                      <div className="grid grid-cols-2 gap-2 text-[11px] bg-[#F6F3F2] p-2.5 rounded-lg border border-[#DAC2B6]/40">
-                        <div>
-                          <span className="text-[#877369] block">Admission / Est:</span>
-                          <span className="font-bold text-[#1C1B1B]">
-                            {stop.estCost > 0 ? `₹${stop.estCost}` : "Free Entry"}
-                          </span>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-[#54433A] pt-2 border-t border-[#F0ECE9]">
+                        <div className="flex items-center space-x-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#6C2F00] shrink-0" />
+                          <span>{stop.visitMinutes || 90} mins visit</span>
                         </div>
-                        <div>
-                          <span className="text-[#877369] block">Visit Duration:</span>
-                          <span className="font-bold text-[#1C1B1B]">
-                            {stop.visitMinutes || 90} mins
+                        <div className="flex items-center space-x-1.5">
+                          <Banknote className="w-3.5 h-3.5 text-[#6C2F00] shrink-0" />
+                          <span>
+                            {stop.estCost && stop.estCost > 0
+                              ? `₹${stop.estCost.toLocaleString("en-IN")}`
+                              : "Free entry"}
                           </span>
                         </div>
                       </div>
 
-                      {/* Recommended Items */}
-                      <div className="space-y-1 pt-1">
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#6C2F00] flex items-center gap-1">
-                          <Backpack className="w-3 h-3" />
-                          What to Bring / Tips:
-                        </span>
-                        <p className="text-[11px] text-[#54433A] leading-relaxed">
+                      <div className="bg-[#FCF9F8] p-2.5 rounded-lg border border-[#DAC2B6]/40 text-xs">
+                        <div className="flex items-center space-x-1.5 text-[#6C2F00] font-semibold mb-1">
+                          <Backpack className="w-3.5 h-3.5" />
+                          <span className="text-[11px] uppercase tracking-wider">
+                            What to bring
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-[#54433A] leading-tight">
                           {getRecommendedItems(stop.category)}
                         </p>
                       </div>
                     </div>
                   </div>
 
-                  {/* Links Footer: Google Maps & YouTube Vlog */}
-                  <div className="p-3 bg-[#FAF8F7] border-t border-[#F0EDED] flex items-center justify-between gap-2">
+                  {/* Actions Bar */}
+                  <div className="px-4 py-3 bg-[#FBF9F8] border-t border-[#E5E2E1] flex items-center justify-between text-xs">
                     <a
                       href={mapUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6C2F00] hover:underline"
+                      className="inline-flex items-center space-x-1 text-[#6C2F00] hover:text-[#3B1900] font-semibold"
                     >
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>Google Maps ↗</span>
+                      <Navigation className="w-3.5 h-3.5" />
+                      <span>Directions</span>
                     </a>
 
                     <a
                       href={vlogUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 hover:underline"
+                      className="inline-flex items-center space-x-1 text-[#C04000] hover:text-[#902800] font-semibold"
                     >
-                      <Video className="w-3.5 h-3.5 text-red-600 fill-red-600" />
-                      <span>Vlog Video ↗</span>
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Watch Vlog</span>
                     </a>
                   </div>
                 </div>
@@ -277,24 +265,28 @@ export const TripPlacesTab = ({ trip }) => {
         </section>
       )}
 
-      {/* ── ALL SIGHTS CATALOGUE ── */}
-      <section className="space-y-6 pt-6 border-t border-[#E5E2E1]">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h4 className="font-serif text-xl font-bold text-[#1C1B1B]">
-            All Exploration Sights ({filteredPlaces.length})
-          </h4>
+      {/* ── ALL SIGHTS DIRECTORY ── */}
+      <section className="space-y-6 pt-4 border-t border-[#E5E2E1]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h4 className="font-serif text-xl font-bold text-[#1C1B1B]">
+              Complete Destination Directory
+            </h4>
+            <p className="text-xs text-[#54433A] mt-1">
+              Filter curated sights by theme or interest.
+            </p>
+          </div>
 
-          {/* Category filter pills */}
-          <div className="flex items-center space-x-2 overflow-x-auto pb-1 hide-scrollbar">
+          <div className="flex flex-wrap gap-2">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 type="button"
                 onClick={() => setSelectedCategory(cat.id)}
-                className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                   selectedCategory === cat.id
                     ? "bg-[#6C2F00] text-white shadow-xs"
-                    : "bg-white text-[#54433A] border border-[#DAC2B6] hover:border-[#6C2F00]"
+                    : "bg-[#F6F3F2] text-[#54433A] hover:bg-[#EAE5E2]"
                 }`}
               >
                 {cat.label}
@@ -307,9 +299,7 @@ export const TripPlacesTab = ({ trip }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredPlaces.map((place, idx) => {
               const photoUrl =
-                place.photos?.[0]?.url ||
-                place.photoUrl ||
-                "https://images.unsplash.com/photo-1599661046227-4d1c87a5b9e1?auto=format&fit=crop&w=600&q=80";
+                place.photos?.[0]?.url || place.photoUrl || null;
 
               const mapUrl =
                 place.mapUrl ||
@@ -330,25 +320,22 @@ export const TripPlacesTab = ({ trip }) => {
                 >
                   <div>
                     <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
-                      <img
+                      <PlacePhoto
                         src={photoUrl}
                         alt={place.name}
-                        loading="lazy"
+                        category={place.category}
+                        credit={place.photos?.[0]?.author || place.photoCredit}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        onError={(e) => {
-                          e.target.src =
-                            "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=600&q=80";
-                        }}
                       />
-                      <div className="absolute top-3 left-3">
+                      <div className="absolute top-3 left-3 z-10">
                         <Badge variant="terracotta" size="xs">
                           {place.category || "Sight"}
                         </Badge>
                       </div>
-                      {place.rating && (
-                        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
-                          <span>{place.rating.toFixed(1)}</span>
+                      {(place.rate >= 3 || place.popularity >= 0.8) && (
+                        <div className="absolute top-3 right-3 bg-amber-500/90 text-white text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 shadow-xs z-10">
+                          <Sparkles className="w-3 h-3" />
+                          <span>Popular</span>
                         </div>
                       )}
                     </div>
@@ -358,47 +345,48 @@ export const TripPlacesTab = ({ trip }) => {
                         <h4 className="font-serif text-lg font-bold text-[#1C1B1B] leading-snug">
                           {place.name}
                         </h4>
-                        {place.description && (
-                          <p className="text-xs text-[#54433A] line-clamp-2 leading-relaxed">
-                            {place.description}
-                          </p>
-                        )}
+                        <p className="text-xs text-[#54433A] line-clamp-3 leading-relaxed">
+                          {place.description ||
+                            `Scenic, historical, and cultural interest point in ${trip.destination}.`}
+                        </p>
                       </div>
 
-                      <div className="pt-2 flex items-center justify-between text-xs text-[#877369] border-t border-[#F2EFEF]">
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3.5 h-3.5 text-[#6C2F00]" />
-                          {place.visitMinutes || 90}m
-                        </span>
-                        <span>
-                          Est:{" "}
-                          <strong className="text-slate-900">
-                            {place.estCost > 0 ? `₹${place.estCost}` : "Free"}
-                          </strong>
-                        </span>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-[#54433A] pt-2 border-t border-[#F0ECE9]">
+                        <div className="flex items-center space-x-1.5">
+                          <Clock className="w-3.5 h-3.5 text-[#6C2F00] shrink-0" />
+                          <span>{place.visitMinutes || 90} mins</span>
+                        </div>
+                        <div className="flex items-center space-x-1.5">
+                          <Banknote className="w-3.5 h-3.5 text-[#6C2F00] shrink-0" />
+                          <span>
+                            {place.estCost && place.estCost > 0
+                              ? `₹${place.estCost.toLocaleString("en-IN")}`
+                              : "Free entry"}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  <div className="p-3 bg-[#FAF8F7] border-t border-[#F0EDED] flex items-center justify-between text-xs">
+                  <div className="px-5 py-3 bg-[#FBF9F8] border-t border-[#E5E2E1] flex items-center justify-between text-xs">
                     <a
                       href={mapUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[#6C2F00] hover:underline font-semibold inline-flex items-center gap-1 text-[11px]"
+                      className="inline-flex items-center space-x-1 text-[#6C2F00] hover:text-[#3B1900] font-semibold"
                     >
-                      <MapPin className="w-3.5 h-3.5" />
-                      <span>Maps</span>
+                      <Navigation className="w-3.5 h-3.5" />
+                      <span>Directions</span>
                     </a>
 
                     <a
                       href={vlogUrl}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-red-700 hover:underline font-semibold inline-flex items-center gap-1 text-[11px]"
+                      className="inline-flex items-center space-x-1 text-[#C04000] hover:text-[#902800] font-semibold"
                     >
-                      <Video className="w-3.5 h-3.5 text-red-600 fill-red-600" />
-                      <span>Travel Vlog</span>
+                      <Video className="w-3.5 h-3.5" />
+                      <span>Watch Vlog</span>
                     </a>
                   </div>
                 </div>
@@ -407,9 +395,8 @@ export const TripPlacesTab = ({ trip }) => {
           </div>
         ) : (
           <EmptyState
-            icon={Compass}
             title="No Sights Found"
-            description={`Explore destinations and landmarks in ${trip.destination}.`}
+            message={`No attractions match the selected filter for ${trip.destination}.`}
           />
         )}
       </section>

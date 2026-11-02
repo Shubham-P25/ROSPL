@@ -213,7 +213,17 @@ async function executeJob(job) {
       validate: (list) => Array.isArray(list) && list.length >= 3,
     });
 
-    const places = placeResult.data;
+    let places = placeResult.data;
+    if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+      const { haversineKm } = require("../lib/haversine");
+      const filtered = places.filter((p) => {
+        if (!p || typeof p.lat !== "number" || typeof p.lng !== "number") return false;
+        return haversineKm(coords, { lat: p.lat, lng: p.lng }) <= 80;
+      });
+      if (filtered.length >= 3) {
+        places = filtered;
+      }
+    }
     if (placeResult.degraded) {
       degraded.push("places:seed-fallback");
     }

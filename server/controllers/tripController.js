@@ -250,7 +250,17 @@ async function executeTripPlanGeneration(trip, options = {}, userId) {
     retries: 1,
     validate: (list) => Array.isArray(list) && list.length >= 3,
   });
-  const places = placeResult.data;
+  let places = placeResult.data;
+  if (coords && Number.isFinite(coords.lat) && Number.isFinite(coords.lng)) {
+    const { haversineKm } = require("../lib/haversine");
+    const filtered = places.filter((p) => {
+      if (!p || typeof p.lat !== "number" || typeof p.lng !== "number") return false;
+      return haversineKm(coords, { lat: p.lat, lng: p.lng }) <= 80;
+    });
+    if (filtered.length >= 3) {
+      places = filtered;
+    }
+  }
 
   // If user specified a famous spot / must-see spot from vlogs, inject it as top spot
   if (famousSpot) {
@@ -345,7 +355,10 @@ async function executeTripPlanGeneration(trip, options = {}, userId) {
         ];
       } else {
         try {
-          const photo = await wikimedia.fetchPlacePhoto(pl.name, destination);
+          const photo = await wikimedia.fetchPlacePhoto(pl.name, destination, {
+            lat: pl.lat,
+            lng: pl.lng,
+          });
           if (photo) {
             pl.photos = [photo];
             pl.photoUrl = photo.url;
