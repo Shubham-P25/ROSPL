@@ -30,3 +30,4 @@ export function travelMinutes(km) {
   if (!km || km <= 0) return 0;
   return Math.round((km / 25) * 60) + 5;
 }
+

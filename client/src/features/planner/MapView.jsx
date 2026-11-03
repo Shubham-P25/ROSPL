@@ -155,7 +155,7 @@ export default function MapView({
     // Check optional CARTO key in client environment
     const cartoKey = import.meta.env.VITE_CARTO_API_KEY;
     const tileUrl = cartoKey
-      ? `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${cartoKey}`
+      ? `https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png?key=${cartoKey}&v=1`
       : "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
 
     const attribution = cartoKey

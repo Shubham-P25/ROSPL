@@ -5,3 +5,4 @@ export const assistantApi = {
   applyAction: (actionId) => apiClient.post(`/assistant/actions/${actionId}/apply`),
   undoAction: (actionId) => apiClient.post(`/assistant/actions/${actionId}/undo`),
 };
+

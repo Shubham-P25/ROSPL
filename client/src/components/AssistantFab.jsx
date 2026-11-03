@@ -33,3 +33,4 @@ export const AssistantFab = ({ onClick, isOpen }) => {
 };
 
 export default AssistantFab;
+

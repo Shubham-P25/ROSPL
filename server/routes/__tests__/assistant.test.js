@@ -38,3 +38,4 @@ describe("Assistant RAG & Intent Retrieval Tests", () => {
     expect(hasEmergency).toBe(true);
   });
 });
+

@@ -62,3 +62,4 @@ describe("Weather Normalizer", () => {
     expect(serialized.includes("NaN")).toBe(false);
   });
 });
+

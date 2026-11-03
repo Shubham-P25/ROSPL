@@ -423,3 +423,4 @@ export const AssistantDrawer = ({ isOpen, onClose }) => {
 };
 
 export default AssistantDrawer;
+

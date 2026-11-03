@@ -23,3 +23,4 @@ The Emergency Tab displays nationwide Indian emergency helplines: Police (112 / 
 
 ## How does Trip Sharing work?
 PackGo allows you to generate a secure read-only public share link with a unique cryptographic token. Anyone with the link can view your itinerary, map, and overview without needing to log in, while editing controls remain protected under your account. You can toggle sharing on or off at any time.
+

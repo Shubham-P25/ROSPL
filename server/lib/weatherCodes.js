@@ -45,3 +45,4 @@ module.exports = {
   WMO_CODE_MAP,
   getWeatherCondition,
 };
+

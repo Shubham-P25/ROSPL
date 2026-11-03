@@ -84,3 +84,4 @@ describe("recommendBudget Planner Unit Tests", () => {
     expect(result.categories.transport).toBeGreaterThanOrEqual(2500);
   });
 });
+

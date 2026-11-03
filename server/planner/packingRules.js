@@ -264,3 +264,4 @@ module.exports = {
   DESERT_DESTINATIONS,
   RELIGIOUS_DESTINATIONS,
 };
+
