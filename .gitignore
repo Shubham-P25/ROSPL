@@ -33,3 +33,5 @@ Travel-Plans-/
 testsprite_tests\tmp\config.json
 .vercel
 .env*
+!.env.example
+!**/.env.example

@@ -53,10 +53,37 @@ const TripSchema = new mongoose.Schema({
     contactInfo: String,
   },
   transportation: {
+    type: mongoose.Schema.Types.Mixed,
+    default: () => ({ type: "vehicle" }),
+  },
+  startingLocation: {
     type: String,
-    bookingRef: String,
-    departureTime: Date,
-    arrivalTime: Date,
+    default: "",
+    trim: true,
+  },
+  numberOfPeople: {
+    type: Number,
+    default: 1,
+    min: [1, "Number of people must be at least 1"],
+  },
+  transportType: {
+    type: String,
+    default: "vehicle",
+  },
+  interests: [
+    {
+      type: String,
+    },
+  ],
+  daysPerSpot: {
+    type: Number,
+    default: 3,
+    min: 1,
+    max: 10,
+  },
+  famousSpot: {
+    type: String,
+    default: "",
   },
   shareToken: {
     type: String,
@@ -66,6 +93,13 @@ const TripSchema = new mongoose.Schema({
   shareEnabled: {
     type: Boolean,
     default: false,
+  },
+  planId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Plan",
+  },
+  planData: {
+    type: mongoose.Schema.Types.Mixed,
   },
   createdAt: {
     type: Date,
@@ -97,6 +131,7 @@ TripSchema.pre("validate", function (next) {
 
   if (
     this.transportation &&
+    typeof this.transportation === "object" &&
     this.transportation.departureTime &&
     this.transportation.arrivalTime &&
     this.transportation.arrivalTime < this.transportation.departureTime

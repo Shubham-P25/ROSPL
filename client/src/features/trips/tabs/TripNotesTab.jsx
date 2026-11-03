@@ -1,15 +1,19 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { tripsApi } from "../../../services/api/tripsApi";
 import { getErrorMessage } from "../../../services/api/client";
 import Button from "../../../components/Button";
 import FormField from "../../../components/FormField";
-import { FileText, Save, CheckCircle2 } from "lucide-react";
+import { Save, CheckCircle2 } from "lucide-react";
 
 export const TripNotesTab = ({ trip, onTripUpdated }) => {
   const [description, setDescription] = useState(trip.description || "");
   const [loading, setLoading] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
+
+  useEffect(() => {
+    setDescription(trip.description || "");
+  }, [trip.description]);
 
   const handleSave = async (e) => {
     e.preventDefault();

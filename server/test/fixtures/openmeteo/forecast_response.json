@@ -1,0 +1,11 @@
+{
+  "latitude": 26.9,
+  "longitude": 75.8,
+  "timezone": "Asia/Kolkata",
+  "daily": {
+    "time": ["2026-10-25", "2026-10-26", "2026-10-27"],
+    "temperature_2m_max": [31.5, 32.2, 30.8],
+    "temperature_2m_min": [18.2, 19.0, 17.5],
+    "precipitation_probability_max": [10, 45, 20]
+  }
+}

@@ -71,15 +71,12 @@ exports.getByDestination = async (req, res, next) => {
   }
 };
 
-
 exports.listAvailableCountries = async (req, res, next) => {
   try {
-    const countries = Object.entries(EMERGENCY_NUMBERS).map(
-      ([code, data]) => ({
-        countryCode: code,
-        country: data.country,
-      }),
-    );
+    const countries = Object.entries(EMERGENCY_NUMBERS).map(([code, data]) => ({
+      countryCode: code,
+      country: data.country,
+    }));
     res.json({ success: true, countries });
   } catch (err) {
     next(err);

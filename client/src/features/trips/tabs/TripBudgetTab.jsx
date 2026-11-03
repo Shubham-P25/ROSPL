@@ -15,6 +15,7 @@ import {
   Calendar,
   AlertCircle,
   TrendingUp,
+  Users,
 } from "lucide-react";
 
 export const TripBudgetTab = ({ trip }) => {
@@ -25,6 +26,8 @@ export const TripBudgetTab = ({ trip }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [formLoading, setFormLoading] = useState(false);
   const [formError, setFormError] = useState("");
+
+  const numberOfPeople = Math.max(1, Number(trip?.numberOfPeople) || 1);
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -126,24 +129,66 @@ export const TripBudgetTab = ({ trip }) => {
       ? Math.min(100, Math.round((totalSpent / plannedBudget) * 100))
       : 0;
 
+  // Calculate per-person split metrics
+  const perPersonBudget = Math.round(plannedBudget / numberOfPeople);
+  const perPersonSpent = Math.round(totalSpent / numberOfPeople);
+  const perPersonRemaining = Math.round(budgetRemaining / numberOfPeople);
+
   return (
     <div className="space-y-10">
+      {/* Traveler Party Distribution Banner */}
+      <div className="bg-[#FAF8F7] border border-[#E5E2E1] p-4 sm:p-5 rounded flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 rounded bg-[#6C2F00]/10 flex items-center justify-center text-[#6C2F00]">
+            <Users className="w-5 h-5" />
+          </div>
+          <div>
+            <h4 className="font-serif font-bold text-sm text-[#1C1B1B]">
+              Expense Split Across {numberOfPeople} {numberOfPeople === 1 ? "Traveler" : "Travelers"}
+            </h4>
+            <p className="text-xs text-[#54433A]">
+              All journey expenditures are proportionally calculated per person in your group.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-semibold px-3 py-1 bg-[#6C2F00] text-white rounded-full">
+            {numberOfPeople} {numberOfPeople === 1 ? "Person" : "People"}
+          </span>
+          <span className="text-xs text-[#877369]">
+            Individual Share: ~₹{perPersonSpent.toLocaleString("en-IN")} spent
+          </span>
+        </div>
+      </div>
+
       {/* Budget Summary Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         <div className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs">
-          <span className="text-xs font-semibold uppercase text-[#877369]">
-            Planned Budget
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-[#877369]">
+              Planned Budget
+            </span>
+            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-[#F0EDED] text-[#54433A]">
+              ₹{perPersonBudget.toLocaleString("en-IN")} / person
+            </span>
+          </div>
           <p className="font-serif text-2xl font-bold text-[#1C1B1B] mt-1">
             ₹{plannedBudget.toLocaleString("en-IN")}
           </p>
-          <p className="text-[11px] text-[#54433A] mt-1">Target allocated</p>
+          <p className="text-[11px] text-[#54433A] mt-1">
+            Total target allocated for {numberOfPeople} {numberOfPeople === 1 ? "person" : "people"}
+          </p>
         </div>
 
         <div className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs">
-          <span className="text-xs font-semibold uppercase text-[#6C2F00]">
-            Total Expended
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-[#6C2F00]">
+              Total Expended
+            </span>
+            <span className="text-[10px] font-semibold uppercase px-2 py-0.5 rounded bg-[#6C2F00]/10 text-[#6C2F00]">
+              ₹{perPersonSpent.toLocaleString("en-IN")} / person
+            </span>
+          </div>
           <p className="font-serif text-2xl font-bold text-[#6C2F00] mt-1">
             ₹{totalSpent.toLocaleString("en-IN")}
           </p>
@@ -156,14 +201,21 @@ export const TripBudgetTab = ({ trip }) => {
             />
           </div>
           <p className="text-[11px] text-[#54433A] mt-1.5">
-            {percentUsed}% of budget utilized
+            {percentUsed}% of group budget utilized
           </p>
         </div>
 
         <div className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs">
-          <span className="text-xs font-semibold uppercase text-[#877369]">
-            Remaining Sanctuary Balance
-          </span>
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-semibold uppercase text-[#877369]">
+              Remaining Sanctuary Balance
+            </span>
+            <span className={`text-[10px] font-semibold uppercase px-2 py-0.5 rounded ${
+              budgetRemaining < 0 ? "bg-[#FFDAD6] text-[#BA1A1A]" : "bg-[#EAF5EC] text-[#2E4632]"
+            }`}>
+              ₹{perPersonRemaining.toLocaleString("en-IN")} / person
+            </span>
+          </div>
           <p
             className={`font-serif text-2xl font-bold mt-1 ${
               budgetRemaining < 0 ? "text-[#BA1A1A]" : "text-[#2E4632]"
@@ -182,28 +234,37 @@ export const TripBudgetTab = ({ trip }) => {
       {/* Category Breakdown */}
       {summary.length > 0 && (
         <div className="bg-[#FFFFFF] p-6 sm:p-8 border border-[#E5E2E1] rounded shadow-xs space-y-6">
-          <h4 className="font-serif text-xl font-bold text-[#1C1B1B] flex items-center">
-            <PieChart className="w-5 h-5 mr-2 text-[#6C2F00]" />
-            Expense Distribution by Category
-          </h4>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+            <h4 className="font-serif text-xl font-bold text-[#1C1B1B] flex items-center">
+              <PieChart className="w-5 h-5 mr-2 text-[#6C2F00]" />
+              Expense Distribution by Category
+            </h4>
+            <span className="text-xs text-[#877369]">
+              Calculated for {numberOfPeople} {numberOfPeople === 1 ? "traveler" : "travelers"}
+            </span>
+          </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-            {summary.map((item, idx) => (
-              <div
-                key={idx}
-                className="p-3.5 bg-[#F6F3F2] rounded border border-[#E5E2E1] flex flex-col justify-between"
-              >
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-[#877369] truncate">
-                  {item.category}
-                </span>
-                <span className="font-serif text-lg font-bold text-[#1C1B1B] mt-1">
-                  ₹{(item.totalAmount || 0).toLocaleString("en-IN")}
-                </span>
-                <span className="text-[10px] text-[#54433A] mt-0.5">
-                  {item.count} entry{item.count === 1 ? "" : "ies"}
-                </span>
-              </div>
-            ))}
+            {summary.map((item, idx) => {
+              const perPersonCat = Math.round((item.totalAmount || 0) / numberOfPeople);
+              return (
+                <div
+                  key={idx}
+                  className="p-3.5 bg-[#F6F3F2] rounded border border-[#E5E2E1] flex flex-col justify-between"
+                >
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-[#877369] truncate">
+                    {item.category}
+                  </span>
+                  <span className="font-serif text-lg font-bold text-[#1C1B1B] mt-1">
+                    ₹{(item.totalAmount || 0).toLocaleString("en-IN")}
+                  </span>
+                  <div className="mt-1 pt-1 border-t border-[#E5E2E1]/60 flex items-center justify-between text-[10px] text-[#54433A]">
+                    <span>₹{perPersonCat.toLocaleString("en-IN")}/person</span>
+                    <span>{item.count} items</span>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}
@@ -213,10 +274,10 @@ export const TripBudgetTab = ({ trip }) => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E2E1]">
           <div>
             <h3 className="font-serif text-2xl font-bold text-[#1C1B1B]">
-              Expense Log
+              Expense Log & Traveler Splits
             </h3>
             <p className="text-xs text-[#54433A]">
-              Itemized entries recorded for this expedition.
+              Itemized entries recorded for this expedition, distributed across {numberOfPeople} {numberOfPeople === 1 ? "person" : "people"}.
             </p>
           </div>
 
@@ -241,49 +302,56 @@ export const TripBudgetTab = ({ trip }) => {
                     <th className="py-3.5 px-6">Date</th>
                     <th className="py-3.5 px-6">Category</th>
                     <th className="py-3.5 px-6">Description</th>
-                    <th className="py-3.5 px-6 text-right">Amount</th>
+                    <th className="py-3.5 px-6 text-right">Total Amount</th>
+                    <th className="py-3.5 px-6 text-right">Per Person (÷{numberOfPeople})</th>
                     <th className="py-3.5 px-6 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#F0EDED]">
-                  {expenses.map((exp) => (
-                    <tr
-                      key={exp._id}
-                      className="hover:bg-[#FCF9F8] transition-colors"
-                    >
-                      <td className="py-4 px-6 font-medium text-[#1C1B1B] whitespace-nowrap">
-                        {exp.date
-                          ? new Date(exp.date).toLocaleDateString("en-IN", {
-                              month: "short",
-                              day: "numeric",
-                              year: "numeric",
-                            })
-                          : "—"}
-                      </td>
-                      <td className="py-4 px-6">
-                        <Badge variant="terracotta" size="xs">
-                          {exp.category}
-                        </Badge>
-                      </td>
-                      <td className="py-4 px-6 text-[#54433A] max-w-xs truncate">
-                        {exp.description || "—"}
-                      </td>
-                      <td className="py-4 px-6 text-right font-serif font-bold text-[#1C1B1B] whitespace-nowrap text-sm">
-                        {exp.currency || "INR"}{" "}
-                        {Number(exp.amount).toLocaleString("en-IN")}
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <button
-                          type="button"
-                          onClick={() => handleDeleteExpense(exp._id)}
-                          className="text-[#877369] hover:text-[#BA1A1A] transition-colors p-1"
-                          title="Delete entry"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {expenses.map((exp) => {
+                    const itemPerPerson = Math.round((Number(exp.amount) || 0) / numberOfPeople);
+                    return (
+                      <tr
+                        key={exp._id}
+                        className="hover:bg-[#FCF9F8] transition-colors"
+                      >
+                        <td className="py-4 px-6 font-medium text-[#1C1B1B] whitespace-nowrap">
+                          {exp.date
+                            ? new Date(exp.date).toLocaleDateString("en-IN", {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              })
+                            : "—"}
+                        </td>
+                        <td className="py-4 px-6">
+                          <Badge variant="terracotta" size="xs">
+                            {exp.category}
+                          </Badge>
+                        </td>
+                        <td className="py-4 px-6 text-[#54433A] max-w-xs truncate">
+                          {exp.description || "—"}
+                        </td>
+                        <td className="py-4 px-6 text-right font-serif font-bold text-[#1C1B1B] whitespace-nowrap text-sm">
+                          {exp.currency || "INR"}{" "}
+                          {Number(exp.amount).toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-4 px-6 text-right font-sans font-medium text-[#6C2F00] whitespace-nowrap text-xs">
+                          ₹{itemPerPerson.toLocaleString("en-IN")}
+                        </td>
+                        <td className="py-4 px-6 text-center">
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExpense(exp._id)}
+                            className="text-[#877369] hover:text-[#BA1A1A] transition-colors p-1"
+                            title="Delete entry"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

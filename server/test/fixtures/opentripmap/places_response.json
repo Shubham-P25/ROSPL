@@ -1,0 +1,32 @@
+[
+  {
+    "xid": "Q12345",
+    "name": "Amber Palace Complex",
+    "rate": 3,
+    "kinds": "historic,monuments,cultural",
+    "point": {
+      "lat": 26.9855,
+      "lon": 75.8513
+    }
+  },
+  {
+    "xid": "Q67890",
+    "name": "Man Sagar Lake Birds Sanctuary",
+    "rate": 2,
+    "kinds": "natural,lakes",
+    "point": {
+      "lat": 26.9535,
+      "lon": 75.8462
+    }
+  },
+  {
+    "xid": "Q11111",
+    "name": "",
+    "rate": 1,
+    "kinds": "other",
+    "point": {
+      "lat": 26.91,
+      "lon": 75.81
+    }
+  }
+]

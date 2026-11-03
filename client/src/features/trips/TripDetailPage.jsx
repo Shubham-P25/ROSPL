@@ -36,6 +36,44 @@ import {
   Edit,
 } from "lucide-react";
 
+const DESTINATION_FALLBACK_COVERS = {
+  kerala:
+    "https://upload.wikimedia.org/wikipedia/commons/6/6e/Kochi%2C_Fishing_nets_at_sunset%2C_Kerala%2C_India.jpg",
+  mumbai:
+    "https://upload.wikimedia.org/wikipedia/commons/7/74/Mumbai_03-2016_27_skyline_at_Marine_Drive.jpg",
+  jaipur:
+    "https://upload.wikimedia.org/wikipedia/commons/4/41/East_facade_Hawa_Mahal_Jaipur_from_ground_level_%28July_2022%29_-_img_01.jpg",
+  udaipur:
+    "https://upload.wikimedia.org/wikipedia/commons/4/40/City_Palace%2C_Udaipur.jpg",
+  goa: "https://upload.wikimedia.org/wikipedia/commons/e/e0/Goa_Sunset.jpg",
+  varanasi:
+    "https://upload.wikimedia.org/wikipedia/commons/0/00/Varanasi_Ghats.jpg",
+  delhi:
+    "https://upload.wikimedia.org/wikipedia/commons/0/09/India_Gate_in_New_Delhi_03-2016.jpg",
+  agra: "https://upload.wikimedia.org/wikipedia/commons/b/bd/Taj_Mahal%2C_Agra%2C_India_edit3.jpg",
+  manali:
+    "https://images.unsplash.com/photo-1626621341517-bbf3d9990a23?auto=format&fit=crop&w=1600&q=80",
+  srinagar:
+    "https://images.unsplash.com/photo-1595815771614-ade9d652a65d?auto=format&fit=crop&w=1600&q=80",
+  ladakh:
+    "https://images.unsplash.com/photo-1581793745862-99fde7fa73d2?auto=format&fit=crop&w=1600&q=80",
+  rishikesh:
+    "https://images.unsplash.com/photo-1600093463592-8e36ae95ef56?auto=format&fit=crop&w=1600&q=80",
+};
+
+const getDestinationCover = (destName, existingImages) => {
+  if (existingImages && existingImages.length > 0 && existingImages[0]) {
+    return existingImages[0];
+  }
+  const key = (destName || "").toLowerCase().trim();
+  for (const [destKey, url] of Object.entries(DESTINATION_FALLBACK_COVERS)) {
+    if (key.includes(destKey) || destKey.includes(key)) {
+      return url;
+    }
+  }
+  return "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1600&q=80";
+};
+
 export const TripDetailPage = () => {
   const { id } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -143,10 +181,13 @@ export const TripDetailPage = () => {
   }
 
   const { destination, startDate, endDate, status, budget, images = [] } = trip;
-  const coverImage =
-    images && images.length > 0
-      ? images[0]
-      : "https://lh3.googleusercontent.com/aida-public/AB6AXuAP7Eydm5klYyHztk8KE4KpZIyD83iGhMUvryuywAzGAGgOn2jZs7FQbQWQOMeKhHlwAYGAeSpvj-1Y5hO08P4zVVUvvz9LzlXTRS5mAFaDA6r9AtzD5ZPvz7VZQYOz31KH_L4ULdg08ExDnOTOpYzQUH9jOCNGkrTVjXE6cwibu4jNnQe5c6N3aH39Xj1H5iOFxaQLiRQStop3An0PGby3Rw5rjaiBFJgfc3oZriy_ucxO1VVg39hkDA";
+  const [coverImage, setCoverImage] = useState(() =>
+    getDestinationCover(destination, images),
+  );
+
+  useEffect(() => {
+    setCoverImage(getDestinationCover(destination, images));
+  }, [destination, images]);
 
   const formatDate = (d) => {
     if (!d) return "";
@@ -173,9 +214,16 @@ export const TripDetailPage = () => {
     <div className="min-h-screen bg-[#FCF9F8] pb-24">
       {/* ── 1. CINEMATIC HERO HEADER ── */}
       <section className="relative w-full h-[580px] sm:h-[680px] bg-[#1C1B1B] overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: `url("${coverImage}")` }}
+        {/* Dynamic Destination Image with Multi-Tier Fallback */}
+        <img
+          src={coverImage}
+          alt={destination}
+          onError={() =>
+            setCoverImage(
+              "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=1600&q=80",
+            )
+          }
+          className="absolute inset-0 w-full h-full object-cover object-center transition-all duration-700"
         />
         <div className="absolute inset-0 scrim-top" />
         <div className="absolute inset-0 scrim-bottom" />
@@ -221,7 +269,7 @@ export const TripDetailPage = () => {
             </div>
 
             {/* Glass-Panel Action Buttons */}
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-wrap items-center gap-3">
               <button
                 type="button"
                 onClick={handleShareClick}

@@ -6,7 +6,6 @@ import {
   X,
   Compass,
   MapPin,
-  Sparkles,
   User,
   LogOut,
   ChevronDown,

@@ -71,6 +71,7 @@ export function App() {
                   element={<DestinationDetailPage />}
                 />
                 <Route path="/how-it-works" element={<HowItWorksPage />} />
+                <Route path="/planner" element={<Navigate to="/my-journey" replace />} />
                 <Route path="/contact" element={<ContactHelpPage />} />
                 <Route path="/help" element={<ContactHelpPage />} />
                 <Route path="/share/:token" element={<SharedTripPage />} />

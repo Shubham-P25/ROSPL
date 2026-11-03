@@ -1,204 +1,418 @@
 import React, { useState, useEffect } from "react";
-import { placesApi } from "../../../services/api/placesApi";
-import { getErrorMessage } from "../../../services/api/client";
 import Badge from "../../../components/Badge";
-import Button from "../../../components/Button";
-import LoadingState from "../../../components/LoadingState";
 import EmptyState from "../../../components/EmptyState";
+import MapView from "../../planner/MapView";
 import {
   Compass,
-  MapPin,
   ExternalLink,
-  Tag,
   Star,
+  Clock,
+  MapPin,
+  Navigation,
+  Video,
+  Backpack,
+  Layers,
   Banknote,
-  Search,
-  Filter,
 } from "lucide-react";
+
+const getRecommendedItems = (category = "") => {
+  const cat = category.toLowerCase();
+  if (cat.includes("beach") || cat.includes("coast")) {
+    return "Sunglasses, Sunscreen SPF50, Flip-flops, Cotton Towel";
+  }
+  if (cat.includes("nature") || cat.includes("wildlife") || cat.includes("trek")) {
+    return "Comfortable Walking Shoes, Insect Repellent, Camera, Water Bottle";
+  }
+  if (cat.includes("culture") || cat.includes("temple") || cat.includes("spiritual") || cat.includes("heritage")) {
+    return "Modest Covered Attire, Slip-on Shoes, Scarf, Photography Permit";
+  }
+  if (cat.includes("food") || cat.includes("culinary") || cat.includes("shopping") || cat.includes("bazaar")) {
+    return "Hand Sanitizer, UPI / Cash for Local Stalls, Reusable Shopping Tote";
+  }
+  return "Camera / Smartphone, Walking Shoes, Water Bottle";
+};
 
 export const TripPlacesTab = ({ trip }) => {
   const [places, setPlaces] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [selectedDay, setSelectedDay] = useState(1);
+
+  const planDays = trip?.planData?.days || [];
+  const planPlaces = trip?.planData?.places || {};
+
+  useEffect(() => {
+    if (trip?.planData?.places) {
+      setPlaces(Object.values(trip.planData.places));
+    }
+  }, [trip]);
 
   const categories = [
     { id: "all", label: "All Sights" },
-    { id: "SIGHTS", label: "Viewpoints & Mon." },
-    { id: "HISTORICAL", label: "Historic" },
-    { id: "BEACH_PARK", label: "Nature & Parks" },
-    { id: "RESTAURANT", label: "Culinary" },
-    { id: "SHOPPING", label: "Bazaars" },
+    { id: "culture", label: "Historic & Heritage" },
+    { id: "nature", label: "Nature & Views" },
+    { id: "food", label: "Culinary" },
+    { id: "shopping", label: "Bazaars" },
+    { id: "relaxation", label: "Leisure" },
   ];
 
-  const fetchPlaces = async (cats = []) => {
-    setLoading(true);
-    setError(null);
-    try {
-      const payload = { destination: trip.destination };
-      if (cats && cats.length > 0) {
-        payload.categories = cats;
-      }
-      const res = await placesApi.search(payload);
-      if (res.data?.places) {
-        setPlaces(res.data.places);
-      }
-    } catch (err) {
-      console.warn("Places search error:", err);
-      setError(
-        getErrorMessage(
-          err,
-          `Could not load live points of interest for ${trip.destination}. Ensure OpenTripMap API key is set.`,
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
+  const filteredPlaces = places.filter((p) => {
+    if (selectedCategory === "all") return true;
+    const cat = (p.category || "").toLowerCase();
+    return cat.includes(selectedCategory);
+  });
 
-  useEffect(() => {
-    if (trip.destination) {
-      fetchPlaces(selectedCategory === "all" ? [] : [selectedCategory]);
-    }
-  }, [trip.destination, selectedCategory]);
+  // Current day itinerary stops
+  const currentDayData = planDays.find((d) => d.day === selectedDay) || planDays[0];
+  const currentDayStops = (currentDayData?.items || []).map((item, idx) => {
+    const place = planPlaces[item.placeId] || {};
+    return {
+      ...place,
+      slot: item.slot,
+      order: idx + 1,
+      travelTime: item.travelMinutesFromPrev,
+    };
+  });
 
   return (
-    <div className="space-y-8">
-      {/* Header & Filter Controls */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 pb-6 border-b border-[#E5E2E1]">
+    <div className="space-y-10">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#E5E2E1]">
         <div>
           <span className="text-xs font-semibold uppercase tracking-[0.15em] text-[#6C2F00] block mb-1">
-            Attractions & Landmark Discovery
+            ROUTE MAP &amp; EXPLORATION CATALOGUE
           </span>
           <h3 className="font-serif text-2xl font-bold text-[#1C1B1B]">
-            Points of Interest in {trip.destination}
+            Exploration Map &amp; Sights in {trip.destination}
           </h3>
           <p className="text-xs text-[#54433A] mt-1">
-            Curated historical monuments, vistas, and cultural hotspots from
-            OpenTripMap.
+            Toggle through each day of your expedition to view geographic stops,
+            timed itineraries, and recommended gear.
           </p>
-        </div>
-
-        {/* Category Filters */}
-        <div className="flex items-center space-x-1.5 overflow-x-auto pb-2 md:pb-0">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              type="button"
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-full transition-colors whitespace-nowrap ${
-                selectedCategory === cat.id
-                  ? "bg-[#6C2F00] text-white"
-                  : "bg-[#FFFFFF] text-[#54433A] border border-[#DAC2B6] hover:border-[#1C1B1B]"
-              }`}
-            >
-              {cat.label}
-            </button>
-          ))}
         </div>
       </div>
 
-      {/* Content */}
-      {loading ? (
-        <LoadingState
-          message={`Searching points of interest in ${trip.destination}...`}
-        />
-      ) : error ? (
-        <div className="p-8 bg-[#FFDAD6]/30 border border-[#BA1A1A]/30 rounded text-center">
-          <p className="text-xs font-semibold text-[#BA1A1A]">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-4"
-            onClick={() => fetchPlaces()}
-          >
-            Retry Search
-          </Button>
+      {/* ── DAY SELECTOR TOGGLE BAR ── */}
+      {planDays.length > 0 && (
+        <div className="bg-white p-4 rounded-xl border border-[#DAC2B6]/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-2">
+            <Layers className="w-4 h-4 text-[#6C2F00]" />
+            <span className="text-xs font-bold uppercase tracking-wider text-[#1C1B1B]">
+              Select Itinerary Day:
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
+            {planDays.map((d) => (
+              <button
+                key={d.day}
+                type="button"
+                onClick={() => setSelectedDay(d.day)}
+                className={`px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                  selectedDay === d.day
+                    ? "bg-[#6C2F00] text-white shadow-sm ring-2 ring-[#6C2F00]/20"
+                    : "bg-[#F6F3F2] text-[#54433A] hover:bg-[#DAC2B6]/40"
+                }`}
+              >
+                Day {d.day} ({d.items?.length || 0} stops)
+              </button>
+            ))}
+          </div>
         </div>
-      ) : places.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {places.map((place) => (
-            <div
-              key={place.id || place.name}
-              className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs hover:border-[#DAC2B6] hover:shadow-md transition-all flex flex-col justify-between"
-            >
-              <div className="space-y-3">
-                <div className="flex items-start justify-between gap-2">
-                  <Badge variant="terracotta" size="xs">
-                    {place.category}
-                  </Badge>
-                  {place.rank > 0 && (
-                    <div className="flex items-center space-x-1 text-[11px] text-[#877369]">
-                      <Star className="w-3 h-3 fill-[#F0BD8B] text-[#F0BD8B]" />
-                      <span>Score {place.rank}</span>
-                    </div>
-                  )}
-                </div>
-
-                <h4 className="font-serif text-xl font-bold text-[#1C1B1B] leading-snug">
-                  {place.name}
-                </h4>
-
-                <div className="flex items-center text-xs text-[#54433A]">
-                  <Banknote className="w-3.5 h-3.5 mr-1.5 text-[#6C2F00]" />
-                  <span>
-                    Est. Admission:{" "}
-                    <strong>
-                      {place.price > 0 ? `₹${place.price}` : "Free / Public"}
-                    </strong>
-                  </span>
-                </div>
-
-                {place.tags && place.tags.length > 0 && (
-                  <div className="flex flex-wrap gap-1 pt-2">
-                    {place.tags.slice(0, 3).map((tag, i) => (
-                      <span
-                        key={i}
-                        className="px-2 py-0.5 bg-[#F6F3F2] rounded text-[10px] text-[#877369] uppercase font-mono"
-                      >
-                        #{tag.replace(/_/g, " ")}
-                      </span>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* External Links */}
-              {place.bookingLinks && (
-                <div className="mt-6 pt-4 border-t border-[#F0EDED] flex items-center justify-between text-xs font-semibold">
-                  <a
-                    href={place.bookingLinks.googleMaps}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#6C2F00] hover:underline inline-flex items-center"
-                  >
-                    <span>View Map</span>
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
-
-                  <a
-                    href={place.bookingLinks.tripAdvisor}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-[#877369] hover:text-[#1C1B1B] inline-flex items-center"
-                  >
-                    <span>TripAdvisor</span>
-                    <ExternalLink className="w-3 h-3 ml-1" />
-                  </a>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          icon={Compass}
-          title="No Landmarks Found"
-          description={`We could not identify cataloged OpenTripMap landmarks in ${trip.destination} matching the active category.`}
-          actionLabel="View All Categories"
-          onAction={() => setSelectedCategory("all")}
-        />
       )}
+
+      {/* ── INTERACTIVE LEAFLET MAP VIEW ── */}
+      {planDays.length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs text-[#877369]">
+            <span className="flex items-center gap-1 font-semibold text-[#6C2F00]">
+              <Navigation className="w-3.5 h-3.5" />
+              Showing Route &amp; Highlights for Day {selectedDay}
+            </span>
+            <span>Zoom &amp; drag map to view coordinates</span>
+          </div>
+
+          <MapView
+            days={planDays}
+            places={planPlaces}
+            selectedDay={selectedDay}
+            onSelectDay={setSelectedDay}
+          />
+        </div>
+      )}
+
+      {/* ── DAY ITINERARY HIGHLIGHT CARDS ── */}
+      {currentDayStops.length > 0 && (
+        <section className="space-y-4 pt-2">
+          <div className="flex items-center justify-between">
+            <h4 className="font-serif text-xl font-bold text-[#1C1B1B] flex items-center gap-2">
+              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#6C2F00] text-white text-xs font-bold">
+                {selectedDay}
+              </span>
+              <span>Day {selectedDay} Visiting Itinerary &amp; Highlight Stops</span>
+            </h4>
+            <span className="text-xs text-[#877369]">
+              {currentDayStops.length} stops planned
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {currentDayStops.map((stop, idx) => {
+              const photoUrl =
+                stop.photos?.[0]?.url ||
+                stop.photoUrl ||
+                "https://images.unsplash.com/photo-1599661046227-4d1c87a5b9e1?auto=format&fit=crop&w=600&q=80";
+
+              const mapUrl =
+                stop.mapUrl ||
+                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  (stop.name || "") + " " + trip.destination,
+                )}`;
+
+              const vlogUrl =
+                stop.vlogUrl ||
+                `https://www.youtube.com/results?search_query=${encodeURIComponent(
+                  (stop.name || "") + " " + trip.destination + " travel vlog",
+                )}`;
+
+              return (
+                <div
+                  key={stop.id || idx}
+                  className="bg-white border border-[#E5E2E1] rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    {/* Photo with Stop Badge */}
+                    <div className="relative h-44 w-full bg-slate-100 overflow-hidden">
+                      <img
+                        src={photoUrl}
+                        alt={stop.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=600&q=80";
+                        }}
+                      />
+                      <div className="absolute top-2.5 left-2.5 flex items-center gap-1.5">
+                        <span className="bg-[#6C2F00] text-white text-[11px] font-bold px-2 py-0.5 rounded-md shadow-xs">
+                          Stop #{stop.order}
+                        </span>
+                        <span className="bg-black/60 backdrop-blur-xs text-white text-[10px] uppercase font-bold px-2 py-0.5 rounded-md">
+                          {stop.slot}
+                        </span>
+                      </div>
+                      {stop.rating && (
+                        <div className="absolute top-2.5 right-2.5 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          <span>{stop.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Content */}
+                    <div className="p-4 space-y-3">
+                      <div>
+                        <h5 className="font-serif text-base font-bold text-[#1C1B1B] leading-snug">
+                          {stop.name}
+                        </h5>
+                        <p className="text-xs text-[#54433A] line-clamp-2 mt-1 leading-relaxed">
+                          {stop.description || `Scenic and cultural highlight in ${trip.destination}.`}
+                        </p>
+                      </div>
+
+                      {/* Info & Budget Metrics */}
+                      <div className="grid grid-cols-2 gap-2 text-[11px] bg-[#F6F3F2] p-2.5 rounded-lg border border-[#DAC2B6]/40">
+                        <div>
+                          <span className="text-[#877369] block">Admission / Est:</span>
+                          <span className="font-bold text-[#1C1B1B]">
+                            {stop.estCost > 0 ? `₹${stop.estCost}` : "Free Entry"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[#877369] block">Visit Duration:</span>
+                          <span className="font-bold text-[#1C1B1B]">
+                            {stop.visitMinutes || 90} mins
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Recommended Items */}
+                      <div className="space-y-1 pt-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[#6C2F00] flex items-center gap-1">
+                          <Backpack className="w-3 h-3" />
+                          What to Bring / Tips:
+                        </span>
+                        <p className="text-[11px] text-[#54433A] leading-relaxed">
+                          {getRecommendedItems(stop.category)}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Links Footer: Google Maps & YouTube Vlog */}
+                  <div className="p-3 bg-[#FAF8F7] border-t border-[#F0EDED] flex items-center justify-between gap-2">
+                    <a
+                      href={mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-[#6C2F00] hover:underline"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Google Maps ↗</span>
+                    </a>
+
+                    <a
+                      href={vlogUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-red-700 hover:underline"
+                    >
+                      <Video className="w-3.5 h-3.5 text-red-600 fill-red-600" />
+                      <span>Vlog Video ↗</span>
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
+      {/* ── ALL SIGHTS CATALOGUE ── */}
+      <section className="space-y-6 pt-6 border-t border-[#E5E2E1]">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h4 className="font-serif text-xl font-bold text-[#1C1B1B]">
+            All Exploration Sights ({filteredPlaces.length})
+          </h4>
+
+          {/* Category filter pills */}
+          <div className="flex items-center space-x-2 overflow-x-auto pb-1 hide-scrollbar">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => setSelectedCategory(cat.id)}
+                className={`px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
+                  selectedCategory === cat.id
+                    ? "bg-[#6C2F00] text-white shadow-xs"
+                    : "bg-white text-[#54433A] border border-[#DAC2B6] hover:border-[#6C2F00]"
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {places.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredPlaces.map((place, idx) => {
+              const photoUrl =
+                place.photos?.[0]?.url ||
+                place.photoUrl ||
+                "https://images.unsplash.com/photo-1599661046227-4d1c87a5b9e1?auto=format&fit=crop&w=600&q=80";
+
+              const mapUrl =
+                place.mapUrl ||
+                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                  (place.name || "") + " " + trip.destination,
+                )}`;
+
+              const vlogUrl =
+                place.vlogUrl ||
+                `https://www.youtube.com/results?search_query=${encodeURIComponent(
+                  (place.name || "") + " " + trip.destination + " travel vlog",
+                )}`;
+
+              return (
+                <div
+                  key={place.id || idx}
+                  className="bg-white border border-[#E5E2E1] rounded-xl overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col group justify-between"
+                >
+                  <div>
+                    <div className="relative h-48 w-full bg-slate-100 overflow-hidden">
+                      <img
+                        src={photoUrl}
+                        alt={place.name}
+                        loading="lazy"
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        onError={(e) => {
+                          e.target.src =
+                            "https://images.unsplash.com/photo-1477587458883-47145ed94245?auto=format&fit=crop&w=600&q=80";
+                        }}
+                      />
+                      <div className="absolute top-3 left-3">
+                        <Badge variant="terracotta" size="xs">
+                          {place.category || "Sight"}
+                        </Badge>
+                      </div>
+                      {place.rating && (
+                        <div className="absolute top-3 right-3 bg-black/60 backdrop-blur-xs text-white text-[11px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Star className="w-3 h-3 fill-amber-400 text-amber-400" />
+                          <span>{place.rating.toFixed(1)}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="p-5 space-y-3">
+                      <div className="space-y-1">
+                        <h4 className="font-serif text-lg font-bold text-[#1C1B1B] leading-snug">
+                          {place.name}
+                        </h4>
+                        {place.description && (
+                          <p className="text-xs text-[#54433A] line-clamp-2 leading-relaxed">
+                            {place.description}
+                          </p>
+                        )}
+                      </div>
+
+                      <div className="pt-2 flex items-center justify-between text-xs text-[#877369] border-t border-[#F2EFEF]">
+                        <span className="flex items-center gap-1">
+                          <Clock className="w-3.5 h-3.5 text-[#6C2F00]" />
+                          {place.visitMinutes || 90}m
+                        </span>
+                        <span>
+                          Est:{" "}
+                          <strong className="text-slate-900">
+                            {place.estCost > 0 ? `₹${place.estCost}` : "Free"}
+                          </strong>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-3 bg-[#FAF8F7] border-t border-[#F0EDED] flex items-center justify-between text-xs">
+                    <a
+                      href={mapUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-[#6C2F00] hover:underline font-semibold inline-flex items-center gap-1 text-[11px]"
+                    >
+                      <MapPin className="w-3.5 h-3.5" />
+                      <span>Maps</span>
+                    </a>
+
+                    <a
+                      href={vlogUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-red-700 hover:underline font-semibold inline-flex items-center gap-1 text-[11px]"
+                    >
+                      <Video className="w-3.5 h-3.5 text-red-600 fill-red-600" />
+                      <span>Travel Vlog</span>
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <EmptyState
+            icon={Compass}
+            title="No Sights Found"
+            description={`Explore destinations and landmarks in ${trip.destination}.`}
+          />
+        )}
+      </section>
     </div>
   );
 };

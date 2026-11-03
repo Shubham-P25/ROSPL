@@ -12,6 +12,8 @@ import {
   Trash2,
   Clock,
   CheckCircle,
+  Video,
+  ExternalLink,
 } from "lucide-react";
 
 export const TripItineraryTab = ({ trip, onTripUpdated }) => {
@@ -110,55 +112,77 @@ export const TripItineraryTab = ({ trip, onTripUpdated }) => {
 
       {sortedActivities.length > 0 ? (
         <div className="relative pl-6 sm:pl-8 border-l-2 border-[#DAC2B6] space-y-8 my-6">
-          {sortedActivities.map((act, idx) => (
-            <div key={idx} className="relative group">
-              {/* Timeline marker */}
-              <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-[#6C2F00] border-4 border-[#FCF9F8]" />
+          {sortedActivities.map((act, idx) => {
+            const vlogUrl =
+              act.vlogUrl ||
+              `https://www.youtube.com/results?search_query=${encodeURIComponent(
+                (act.name || "") + " " + (act.location || trip.destination) + " travel vlog",
+              )}`;
 
-              <div className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs hover:border-[#DAC2B6] transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-                <div className="space-y-2">
-                  <div className="flex items-center space-x-2 text-xs font-semibold text-[#6C2F00]">
-                    <Calendar className="w-3.5 h-3.5" />
-                    <span>
-                      {act.date
-                        ? new Date(act.date).toLocaleDateString("en-IN", {
-                            weekday: "short",
-                            month: "short",
-                            day: "numeric",
-                          })
-                        : "Flexible Date"}
-                    </span>
+            return (
+              <div key={idx} className="relative group">
+                {/* Timeline marker */}
+                <div className="absolute -left-[31px] sm:-left-[39px] top-1.5 w-4 h-4 rounded-full bg-[#6C2F00] border-4 border-[#FCF9F8]" />
+
+                <div className="bg-[#FFFFFF] p-6 border border-[#E5E2E1] rounded shadow-xs hover:border-[#DAC2B6] transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                  <div className="space-y-2 flex-1">
+                    <div className="flex items-center space-x-2 text-xs font-semibold text-[#6C2F00]">
+                      <Calendar className="w-3.5 h-3.5" />
+                      <span>
+                        {act.date
+                          ? new Date(act.date).toLocaleDateString("en-IN", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
+                            })
+                          : "Flexible Date"}
+                      </span>
+                    </div>
+
+                    <h4 className="font-serif text-xl font-bold text-[#1C1B1B]">
+                      {act.name}
+                    </h4>
+
+                    {act.location && (
+                      <div className="flex items-center text-xs text-[#877369]">
+                        <MapPin className="w-3.5 h-3.5 mr-1" />
+                        <span>{act.location}</span>
+                      </div>
+                    )}
+
+                    {act.notes && (
+                      <p className="text-xs text-[#54433A] leading-relaxed pt-1 whitespace-pre-line font-sans">
+                        {act.notes}
+                      </p>
+                    )}
+
+                    {/* YouTube Travel Vlog URL Link */}
+                    <div className="pt-2">
+                      <a
+                        href={vlogUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-50 hover:bg-red-100 text-red-700 text-[11px] font-semibold border border-red-200 transition-colors w-fit"
+                      >
+                        <Video className="w-3.5 h-3.5 text-red-600 fill-red-600" />
+                        <span>Watch Travel Vlog</span>
+                        <ExternalLink className="w-3 h-3 text-red-400" />
+                      </a>
+                    </div>
                   </div>
 
-                  <h4 className="font-serif text-xl font-bold text-[#1C1B1B]">
-                    {act.name}
-                  </h4>
-
-                  {act.location && (
-                    <div className="flex items-center text-xs text-[#877369]">
-                      <MapPin className="w-3.5 h-3.5 mr-1" />
-                      <span>{act.location}</span>
-                    </div>
-                  )}
-
-                  {act.notes && (
-                    <p className="text-xs text-[#54433A] leading-relaxed pt-1 whitespace-pre-line font-sans">
-                      {act.notes}
-                    </p>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteActivity(idx)}
+                    className="text-[#877369] hover:text-[#BA1A1A] transition-colors p-1.5 rounded hover:bg-[#FFDAD6]/30 self-end sm:self-start"
+                    title="Remove Activity"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={() => handleDeleteActivity(idx)}
-                  className="text-[#877369] hover:text-[#BA1A1A] transition-colors p-1.5 rounded hover:bg-[#FFDAD6]/30 self-end sm:self-start"
-                  title="Remove Activity"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <EmptyState

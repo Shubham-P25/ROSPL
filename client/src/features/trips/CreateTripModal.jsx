@@ -3,7 +3,18 @@ import { useNavigate } from "react-router-dom";
 import { tripsApi } from "../../services/api/tripsApi";
 import { destinationsApi } from "../../services/api/destinationsApi";
 import { getErrorMessage } from "../../services/api/client";
-import { MapPin, Calendar, AlertCircle, ArrowRight, X } from "lucide-react";
+import { MapPin, Calendar, AlertCircle, ArrowRight, X, Check } from "lucide-react";
+
+export const INTEREST_OPTIONS = [
+  { id: "Games & Adventure", emoji: "🎮", label: "Games & Adventure" },
+  { id: "Beach & Coastal", emoji: "🏖️", label: "Beach & Coastal" },
+  { id: "Heritage & Palaces", emoji: "🏰", label: "Heritage & Palaces" },
+  { id: "Food & Street Eats", emoji: "🍲", label: "Food & Street Eats" },
+  { id: "Nature & Wildlife", emoji: "🌿", label: "Nature & Wildlife" },
+  { id: "Bazaars & Shopping", emoji: "🛍️", label: "Bazaars & Shopping" },
+  { id: "Spiritual & Temples", emoji: "🕉️", label: "Spiritual & Temples" },
+  { id: "Leisure & Nightlife", emoji: "✨", label: "Leisure & Nightlife" },
+];
 
 export const CreateTripModal = ({
   isOpen,
@@ -17,9 +28,13 @@ export const CreateTripModal = ({
     endDate: "",
     budget: "",
     description: "",
-    status: "planned",
+    startingLocation: "",
     accommodationName: "",
-    transportType: "",
+    numberOfPeople: 2,
+    transportType: "vehicle",
+    interests: ["Heritage & Palaces", "Food & Street Eats"],
+    daysPerSpot: 3,
+    famousSpot: "",
   });
 
   const [autocompleteResults, setAutocompleteResults] = useState([]);
@@ -58,6 +73,18 @@ export const CreateTripModal = ({
 
   const todayStr = new Date().toISOString().split("T")[0];
 
+  const toggleInterest = (id) => {
+    setFormData((prev) => {
+      const exists = prev.interests.includes(id);
+      return {
+        ...prev,
+        interests: exists
+          ? prev.interests.filter((i) => i !== id)
+          : [...prev.interests, id],
+      };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -82,8 +109,17 @@ export const CreateTripModal = ({
       startDate: formData.startDate,
       endDate: formData.endDate,
       description: formData.description.trim(),
-      budget: formData.budget ? Number(formData.budget) : 0,
-      status: formData.status,
+      budget: formData.budget ? Number(formData.budget) : 25000,
+      status: "planned",
+      startingLocation: formData.startingLocation.trim(),
+      numberOfPeople: Number(formData.numberOfPeople) || 1,
+      transportType: formData.transportType || "vehicle",
+      transportation: {
+        type: formData.transportType || "vehicle",
+      },
+      interests: formData.interests,
+      daysPerSpot: Number(formData.daysPerSpot) || 3,
+      famousSpot: formData.famousSpot.trim(),
     };
 
     if (formData.accommodationName) {
@@ -91,12 +127,6 @@ export const CreateTripModal = ({
         name: formData.accommodationName,
         checkIn: formData.startDate,
         checkOut: formData.endDate,
-      };
-    }
-
-    if (formData.transportType) {
-      payload.transportation = {
-        type: formData.transportType,
       };
     }
 
@@ -269,22 +299,157 @@ export const CreateTripModal = ({
             <div>
               <label
                 className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
-                htmlFor="trip-status"
+                htmlFor="trip-starting-location"
               >
-                Journey Status
+                Where You Live / Coming From
+              </label>
+              <input
+                id="trip-starting-location"
+                type="text"
+                value={formData.startingLocation}
+                onChange={(e) =>
+                  setFormData({ ...formData, startingLocation: e.target.value })
+                }
+                placeholder="e.g. Mumbai, New Delhi, Bengaluru, Pune"
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] placeholder-[#877369]/50 focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              />
+            </div>
+          </div>
+
+          {/* Travelers & Transport */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-people"
+              >
+                No. of Peoples *
+              </label>
+              <input
+                id="trip-people"
+                type="number"
+                min="1"
+                max="50"
+                required
+                value={formData.numberOfPeople}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    numberOfPeople: Math.max(1, parseInt(e.target.value) || 1),
+                  })
+                }
+                placeholder="e.g. 2"
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              />
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-transport"
+              >
+                Transport Mode
               </label>
               <select
-                id="trip-status"
-                value={formData.status}
+                id="trip-transport"
+                value={formData.transportType}
                 onChange={(e) =>
-                  setFormData({ ...formData, status: e.target.value })
+                  setFormData({ ...formData, transportType: e.target.value })
                 }
                 className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
               >
-                <option value="planned">Planned</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="completed">Completed</option>
+                <option value="vehicle">Vehicle / Car / Cab</option>
+                <option value="train">Train</option>
+                <option value="plane">Plane / Flight</option>
+                <option value="bus">Bus / Coach</option>
               </select>
+            </div>
+          </div>
+
+          {/* Days Per Spot & Famous Spot */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-days-per-spot"
+              >
+                Days Per Spot
+              </label>
+              <select
+                id="trip-days-per-spot"
+                value={formData.daysPerSpot}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    daysPerSpot: parseInt(e.target.value) || 3,
+                  })
+                }
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              >
+                <option value="2">2 Days per spot (Fast-Paced)</option>
+                <option value="3">3 Days per spot (Recommended Default)</option>
+                <option value="4">4 Days per spot (Relaxed)</option>
+                <option value="5">5 Days per spot (In-Depth)</option>
+              </select>
+            </div>
+
+            <div>
+              <label
+                className="block text-xs font-semibold uppercase tracking-wider text-[#877369] mb-1"
+                htmlFor="trip-famous-spot"
+              >
+                Famous Spot / Reason of Visit
+              </label>
+              <input
+                id="trip-famous-spot"
+                type="text"
+                value={formData.famousSpot}
+                onChange={(e) =>
+                  setFormData({ ...formData, famousSpot: e.target.value })
+                }
+                placeholder="e.g. Marine Drive, Athirappilly Falls, Amer Fort"
+                className="w-full bg-transparent border-0 border-b border-[#DAC2B6] py-3 text-base text-[#1C1B1B] placeholder-[#877369]/50 focus:ring-0 focus:border-[#6C2F00] transition-colors"
+              />
+              <span className="text-[11px] text-[#877369] block mt-1">
+                Have a favorite place you saw in travel vlogs? We'll prioritize it.
+              </span>
+            </div>
+          </div>
+
+          {/* Interests & Highlights */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-semibold uppercase tracking-wider text-[#877369]">
+                Interests & Highlights
+              </label>
+              <span className="text-[11px] text-[#6C2F00] font-medium">
+                {formData.interests.length} selected
+              </span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+              {INTEREST_OPTIONS.map((item) => {
+                const selected = formData.interests.includes(item.id);
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => toggleInterest(item.id)}
+                    className={`flex items-center gap-2 p-2.5 rounded border text-left transition-all duration-150 cursor-pointer ${
+                      selected
+                        ? "bg-[#6C2F00] text-white border-[#6C2F00] shadow-xs"
+                        : "bg-[#FFFFFF] text-[#54433A] border-[#DAC2B6] hover:border-[#6C2F00] hover:bg-[#FAF8F7]"
+                    }`}
+                  >
+                    <span className="text-base shrink-0">{item.emoji}</span>
+                    <span className="text-xs font-medium leading-tight truncate">
+                      {item.label}
+                    </span>
+                    {selected && (
+                      <Check className="w-3.5 h-3.5 ml-auto text-white shrink-0" />
+                    )}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

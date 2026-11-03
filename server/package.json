@@ -7,7 +7,7 @@
     "start": "node server.js",
     "server": "nodemon server.js",
     "dev": "nodemon server.js",
-    "test": "echo \"no tests\" && exit 0",
+    "test": "vitest run",
     "lint": "eslint .",
     "format:check": "prettier --check .",
     "format": "prettier --write ."
@@ -30,11 +30,14 @@
     "mongoose": "^8.24.0",
     "nodemailer": "^9.0.1",
     "react-qr-code": "^2.0.21",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@vitest/coverage-v8": "^5.0.5",
     "eslint": "^10.3.0",
     "nodemon": "^3.1.9",
-    "prettier": "^3.8.3"
+    "prettier": "^3.8.3",
+    "vitest": "^5.0.5"
   }
 }
